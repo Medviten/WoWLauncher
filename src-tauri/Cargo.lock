@@ -1559,32 +1559,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "esteria-launcher"
-version = "0.8.6"
-dependencies = [
- "base64 0.22.1",
- "fs2",
- "futures-util",
- "hex",
- "image",
- "image-blp",
- "librqbit",
- "reqwest 0.12.28",
- "rfd",
- "serde",
- "serde_json",
- "sha2",
- "tauri",
- "tauri-build",
- "tauri-plugin-updater",
- "tempfile",
- "tokio",
- "url",
- "wow-mpq",
- "zip 2.4.2",
-]
-
-[[package]]
 name = "event-listener"
 version = "5.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6756,6 +6730,33 @@ name = "weezl"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
+
+[[package]]
+name = "whe-launcher"
+version = "0.8.6"
+dependencies = [
+ "base64 0.22.1",
+ "fs2",
+ "futures-util",
+ "hex",
+ "image",
+ "image-blp",
+ "librqbit",
+ "reqwest 0.12.28",
+ "rfd",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-updater",
+ "tempfile",
+ "tokio",
+ "url",
+ "windows-sys 0.59.0",
+ "wow-mpq",
+ "zip 2.4.2",
+]
 
 [[package]]
 name = "winapi"

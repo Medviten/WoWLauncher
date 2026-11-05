@@ -22,7 +22,7 @@ fn client_payload(paths: &[PathBuf]) -> Result<PathBuf, String> {
     }
     let clients: Vec<_> = paths
         .iter()
-        .filter(|path| path.file_name().is_some_and(|name| name.eq_ignore_ascii_case("Wow.exe")))
+        .filter(|path| path.file_name().is_some_and(|name| name.eq_ignore_ascii_case("WowClient64.exe")))
         .collect();
     if clients.len() == 1 {
         return Ok(clients[0].parent().unwrap_or(Path::new("")).to_path_buf());
@@ -30,7 +30,7 @@ fn client_payload(paths: &[PathBuf]) -> Result<PathBuf, String> {
     if clients.is_empty() && paths.len() == 1 && paths[0].extension().is_some_and(|ext| ext.eq_ignore_ascii_case("zip")) {
         return Ok(paths[0].clone());
     }
-    Err("The torrent must contain one client with Wow.exe, or a single client ZIP.".to_string())
+    Err("The torrent must contain one client with WowClient64.exe, or a single client ZIP.".to_string())
 }
 
 async fn wait_for_pause(paused: &AtomicBool) {
@@ -180,17 +180,17 @@ mod tests {
         assert!(!is_torrent_source(&Url::parse("https://example.com/client.zip").unwrap()));
         assert!(!is_torrent_source(&Url::parse("file:///client.torrent").unwrap()));
         let paths = |values: &[&str]| values.iter().map(PathBuf::from).collect::<Vec<_>>();
-        assert_eq!(client_payload(&paths(&["Wow.exe", "Data/patch.mpq"])).unwrap(), PathBuf::new());
+        assert_eq!(client_payload(&paths(&["WowClient64.exe", "Data/patch.mpq"])).unwrap(), PathBuf::new());
         assert_eq!(
-            client_payload(&paths(&["Esteria/Live/Wow.exe", "Esteria/Live/Data/patch.mpq"])).unwrap(),
+            client_payload(&paths(&["Esteria/Live/WowClient64.exe", "Esteria/Live/Data/patch.mpq"])).unwrap(),
             PathBuf::from("Esteria/Live")
         );
         assert_eq!(client_payload(&paths(&["Esteria.zip"])).unwrap(), PathBuf::from("Esteria.zip"));
         for invalid in [
-            vec!["../Wow.exe"],
-            vec!["C:/Wow.exe"],
-            vec![".launcher/Wow.exe"],
-            vec!["Wow.exe", "PTR/Wow.exe"],
+            vec!["../WowClient64.exe"],
+            vec!["C:/WowClient64.exe"],
+            vec![".launcher/WowClient64.exe"],
+            vec!["WowClient64.exe", "PTR/WowClient64.exe"],
             vec!["readme.txt"],
             vec!["client.zip", "readme.txt"],
         ] {
@@ -206,7 +206,7 @@ mod tests {
         let seed = temp.path().join("seed");
         fs::create_dir_all(seed.join("Data")).unwrap();
         let content: Vec<u8> = (0..4 * 1024 * 1024).map(|index| (index % 251) as u8).collect();
-        fs::write(seed.join("Wow.exe"), b"test client").unwrap();
+        fs::write(seed.join("WowClient64.exe"), b"test client").unwrap();
         fs::write(seed.join("Data/patch.mpq"), &content).unwrap();
         let http = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let http_addr = http.local_addr().unwrap();
@@ -294,7 +294,7 @@ mod tests {
             pause.store(false, Ordering::SeqCst);
             let client = download(&source, &work, &pause, |_, _, _, _| {}).await.unwrap();
             assert_eq!(fs::read(client.join("Data/patch.mpq")).unwrap(), content);
-            assert_eq!(fs::read(client.join("Wow.exe")).unwrap(), b"test client");
+            assert_eq!(fs::read(client.join("WowClient64.exe")).unwrap(), b"test client");
             let magnet_work = temp.path().join("magnet");
             fs::create_dir_all(&magnet_work).unwrap();
             let client = download(&magnet, &magnet_work, &pause, |_, _, _, _| {}).await.unwrap();

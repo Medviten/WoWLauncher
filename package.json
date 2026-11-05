@@ -1,8 +1,8 @@
 {
-  "name": "esteria-launcher",
+  "name": "whe-launcher",
   "version": "0.8.6",
   "private": true,
-  "description": "Desktop launcher for Esteria",
+  "description": "Desktop launcher for WHE",
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",

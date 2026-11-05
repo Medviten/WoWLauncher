@@ -24,26 +24,28 @@ use tokio::time::timeout;
 use url::Url;
 
 mod extras;
+mod login;
 mod torrent;
 
-const SETTINGS_DIR: &str = "EsteriaLauncher";
+const SETTINGS_DIR: &str = "WHELauncher";
 const SETTINGS_FILE: &str = "settings.json";
 const HASH_CACHE_FILE: &str = "hash-cache.json";
 const SOCIAL_STATE_FILE: &str = "social-state.json";
-const DEFAULT_MANIFEST_URL: &str = "http://planetkai.hopto.org:7384/api/v2/client/live/manifest.json";
-const DEFAULT_ADDON_CATALOG_URL: &str = "http://planetkai.hopto.org:7384/api/v2/addons/catalog.json";
-const DEFAULT_PATCH_NOTES_URL: &str = "http://planetkai.hopto.org:7384/api/v2/patchnotes.md";
-const DEFAULT_NEWS_URL: &str = "http://planetkai.hopto.org:7384/api/v2/news.json";
-const DEFAULT_STATUS_URL: &str = "http://planetkai.hopto.org:7384/api/v2/status";
-const DEFAULT_SOCIAL_URL: &str = "http://planetkai.hopto.org:7384/api/v2/social.json";
-const DEFAULT_ARMORY_URL: &str = "http://planetkai.hopto.org:8095/launcher/v1/armory";
-const DEFAULT_DATABASE_URL: &str = "http://planetkai.hopto.org:8095/launcher/v1/database";
+const DEFAULT_MANIFEST_URL: &str = "http://100.110.63.66:7384/client/live/manifest.json";
+const DEFAULT_ADDON_CATALOG_URL: &str = "http://100.110.63.66:7384/addons/catalog.json";
+const DEFAULT_PATCH_NOTES_URL: &str = "http://100.110.63.66:7384/patchnotes.md";
+const DEFAULT_NEWS_URL: &str = "http://100.110.63.66:7384/news.json";
+const DEFAULT_STATUS_URL: &str = "";
+const DEFAULT_SOCIAL_URL: &str = "";
+const DEFAULT_ARMORY_URL: &str = "";
+const DEFAULT_DATABASE_URL: &str = "";
 /// Snapshot endpoints the launcher used before the armory and database were served live by the game server.
-const LEGACY_ARMORY_URL: &str = "http://planetkai.hopto.org:7384/api/v2/armory/characters.json";
-const LEGACY_DATABASE_URL: &str = "http://planetkai.hopto.org:7384/api/v2/database/index.json";
-const DEFAULT_ACCOUNT_API: &str = "http://planetkai.hopto.org:7384";
-const DEFAULT_GAME_API: &str = "http://planetkai.hopto.org:8095";
-const DEFAULT_REALM_HOST: &str = "planetkai.hopto.org";
+const LEGACY_ARMORY_URL: &str = "";
+const LEGACY_DATABASE_URL: &str = "";
+const DEFAULT_ACCOUNT_API: &str = "";
+const DEFAULT_GAME_API: &str = "";
+const DEFAULT_REALM_HOST: &str = "100.110.63.66";
+const DEFAULT_REALM_NAME: &str = "256-bit";
 const DEFAULT_REALM_PORT: u16 = 3724;
 const DOWNLOAD_STALL_SECS: u64 = 60;
 const PARALLEL_FILE_LIMIT: u64 = 64 * 1024 * 1024;
@@ -78,7 +80,7 @@ struct LauncherSettings {
     /// Optional native client download: HTTP(S) ZIP/torrent or magnet. The CDN manifest stays the default.
     #[serde(default)]
     client_source: String,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     discord_presence: bool,
     #[serde(default = "default_discord_client_id")]
     discord_client_id: String,
@@ -92,6 +94,15 @@ struct LauncherSettings {
     realm_host: String,
     #[serde(default = "default_realm_port")]
     realm_port: u16,
+    /// Realm the client connects to straight after login.
+    #[serde(default = "default_realm_name")]
+    realm_name: String,
+    /// Pass the saved login to the client on launch. See login.rs.
+    #[serde(default)]
+    auto_login: bool,
+    /// False until the first-run screen has been completed.
+    #[serde(default)]
+    setup_complete: bool,
     #[serde(default = "default_patch_list")]
     patch_list: String,
     #[serde(default = "default_true")]
@@ -123,13 +134,16 @@ impl Default for LauncherSettings {
             account_api: default_account_api(),
             game_api: default_game_api(),
             client_source: String::new(),
-            discord_presence: true,
+            discord_presence: false,
             discord_client_id: default_discord_client_id(),
             armory_source: default_armory_source(),
             database_source: default_database_source(),
             auto_update_addons: true,
             realm_host: default_realm_host(),
             realm_port: default_realm_port(),
+            realm_name: default_realm_name(),
+            auto_login: false,
+            setup_complete: false,
             patch_list: default_patch_list(),
             clean_wdb: true,
             clear_cache: true,
@@ -145,7 +159,7 @@ fn default_close_action() -> String {
 }
 
 fn default_play_action() -> String {
-    "ask".to_string()
+    "minimize".to_string()
 }
 
 fn normalize_window_action(value: &str, allowed: &[&str], fallback: &str) -> String {
@@ -214,7 +228,7 @@ fn default_game_api() -> String {
 }
 
 fn default_discord_client_id() -> String {
-    option_env!("ESTERIA_DEFAULT_DISCORD_CLIENT").unwrap_or("1564826324672188418").to_string()
+    option_env!("ESTERIA_DEFAULT_DISCORD_CLIENT").unwrap_or("").to_string()
 }
 
 fn default_armory_source() -> String {
@@ -239,6 +253,10 @@ fn default_realm_host() -> String {
     DEFAULT_REALM_HOST.to_string()
 }
 
+fn default_realm_name() -> String {
+    DEFAULT_REALM_NAME.to_string()
+}
+
 fn default_realm_port() -> u16 {
     DEFAULT_REALM_PORT
 }
@@ -256,6 +274,9 @@ struct PatchManifest {
     files: Vec<PatchFile>,
     #[serde(default)]
     bundles: Vec<PatchBundle>,
+    /// Folders under Data/ the manifest fully owns; anything else in them is deleted on repair.
+    #[serde(default)]
+    prune: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -725,21 +746,21 @@ fn save_hash_cache(cache: &HashCache) -> Result<(), String> {
 fn normalize_install_root(value: &str) -> Result<PathBuf, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        return Err("Choose an Esteria installation folder first.".to_string());
+        return Err("Choose an WHE installation folder first.".to_string());
     }
 
     let candidate = PathBuf::from(trimmed);
     let looks_like_wow_exe = candidate
         .file_name()
         .and_then(|name| name.to_str())
-        .map(|name| name.eq_ignore_ascii_case("wow.exe"))
+        .map(|name| name.eq_ignore_ascii_case("wowclient64.exe"))
         .unwrap_or(false);
 
     if looks_like_wow_exe {
         return candidate
             .parent()
             .map(Path::to_path_buf)
-            .ok_or_else(|| "Could not determine the installation folder from Wow.exe.".to_string());
+            .ok_or_else(|| "Could not determine the installation folder from WowClient64.exe.".to_string());
     }
 
     if candidate.exists() && !candidate.is_dir() {
@@ -759,7 +780,7 @@ fn game_root_from_settings(settings: &LauncherSettings, create: bool) -> Result<
 }
 
 fn game_executable_from_settings(settings: &LauncherSettings) -> Result<PathBuf, String> {
-    Ok(game_root_from_settings(settings, false)?.join("Wow.exe"))
+    Ok(game_root_from_settings(settings, false)?.join("WowClient64.exe"))
 }
 
 fn likely_game_candidates() -> Vec<PathBuf> {
@@ -781,13 +802,13 @@ fn likely_game_candidates() -> Vec<PathBuf> {
 
     if let Ok(current_dir) = env::current_dir() {
         candidates.insert(current_dir.clone());
-        candidates.insert(current_dir.join("Esteria"));
+        candidates.insert(current_dir.join("WHE"));
     }
 
     for drive in ["C", "D", "E", "F", "G", "R"] {
         for relative in [
-            "Esteria",
-            "Games\\Esteria",
+            "WHE",
+            "Games\\WHE",
             "World of Warcraft",
             "Games\\World of Warcraft",
             "WoW",
@@ -798,9 +819,9 @@ fn likely_game_candidates() -> Vec<PathBuf> {
 
     if let Some(user_profile) = env::var_os("USERPROFILE") {
         let user = PathBuf::from(user_profile);
-        candidates.insert(user.join("Games").join("Esteria"));
-        candidates.insert(user.join("Desktop").join("Esteria"));
-        candidates.insert(user.join("Downloads").join("Esteria"));
+        candidates.insert(user.join("Games").join("WHE"));
+        candidates.insert(user.join("Desktop").join("WHE"));
+        candidates.insert(user.join("Downloads").join("WHE"));
     }
 
     candidates.into_iter().collect()
@@ -809,7 +830,45 @@ fn likely_game_candidates() -> Vec<PathBuf> {
 fn detect_game_path_internal() -> Option<PathBuf> {
     likely_game_candidates()
         .into_iter()
-        .find(|candidate| candidate.join("Wow.exe").is_file())
+        .find(|candidate| candidate.join("WowClient64.exe").is_file())
+}
+
+/// Files in the manifest's prune folders that the manifest no longer lists. Patch folders are read as
+/// loose MPQ overrides, so a file dropped from a release would otherwise keep overriding the game.
+fn stale_files(root: &Path, manifest: &PatchManifest) -> Result<Vec<String>, String> {
+    let known: HashSet<String> = manifest
+        .files
+        .iter()
+        .map(|file| file.path.replace('\\', "/").to_ascii_lowercase())
+        .collect();
+    let mut stale = Vec::new();
+    for folder in &manifest.prune {
+        let relative = validate_relative_path(folder)?;
+        let mut parts = relative.components();
+        let under_data = parts.next().is_some_and(|part| part.as_os_str().eq_ignore_ascii_case("Data"));
+        if !under_data || parts.next().is_none() {
+            return Err(format!("Refusing to prune outside a Data subfolder: {folder}"));
+        }
+        let mut pending = vec![root.join(relative)];
+        while let Some(current) = pending.pop() {
+            let Ok(entries) = fs::read_dir(&current) else { continue };
+            for entry in entries.flatten() {
+                let Ok(kind) = entry.file_type() else { continue };
+                let path = entry.path();
+                if kind.is_dir() {
+                    pending.push(path);
+                } else if kind.is_file() {
+                    let Ok(inside) = path.strip_prefix(root) else { continue };
+                    let inside = inside.to_string_lossy().replace('\\', "/");
+                    if !known.contains(&inside.to_ascii_lowercase()) {
+                        stale.push(inside);
+                    }
+                }
+            }
+        }
+    }
+    stale.sort();
+    Ok(stale)
 }
 
 fn validate_relative_path(value: &str) -> Result<PathBuf, String> {
@@ -1713,12 +1772,17 @@ fn update_config_wtf(settings: &LauncherSettings) -> Result<(), String> {
         .lines()
         .filter(|line| {
             let lower = line.trim().to_ascii_lowercase();
-            !lower.starts_with("set realmlist ") && !lower.starts_with("set patchlist ")
+            !lower.starts_with("set realmlist ")
+                && !lower.starts_with("set patchlist ")
+                && !lower.starts_with("set realmname ")
         })
         .map(str::to_string)
         .collect();
 
     lines.push(format!("SET realmlist \"{}\"", settings.realm_host.trim()));
+    if !settings.realm_name.trim().is_empty() {
+        lines.push(format!("SET realmName \"{}\"", settings.realm_name.trim()));
+    }
     if !settings.patch_list.trim().is_empty() {
         lines.push(format!("SET patchlist \"{}\"", settings.patch_list.trim()));
     }
@@ -1747,10 +1811,10 @@ fn is_game_running() -> bool {
         command.creation_flags(0x08000000); // Keep the periodic presence check from opening a console.
     }
     command
-        .args(["/FI", "IMAGENAME eq Wow.exe", "/FO", "CSV", "/NH"])
+        .args(["/FI", "IMAGENAME eq WowClient64.exe", "/FO", "CSV", "/NH"])
         .output()
         .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).to_ascii_lowercase().contains("wow.exe"))
+        .map(|output| String::from_utf8_lossy(&output.stdout).to_ascii_lowercase().contains("wowclient64.exe"))
         .unwrap_or(false)
 }
 
@@ -1780,6 +1844,12 @@ fn save_settings(mut settings: LauncherSettings) -> Result<LauncherSettings, Str
 }
 
 #[tauri::command]
+fn default_install_path() -> Option<String> {
+    let profile = env::var_os("USERPROFILE")?;
+    Some(PathBuf::from(profile).join("Games").join("WHE").to_string_lossy().to_string())
+}
+
+#[tauri::command]
 fn detect_game_path() -> Option<String> {
     detect_game_path_internal().map(|path| path.to_string_lossy().to_string())
 }
@@ -1787,7 +1857,7 @@ fn detect_game_path() -> Option<String> {
 #[tauri::command]
 fn choose_install_directory() -> Option<String> {
     rfd::FileDialog::new()
-        .set_title("Choose Esteria install folder")
+        .set_title("Choose WHE install folder")
         .pick_folder()
         .map(|path| path.to_string_lossy().to_string())
 }
@@ -1808,7 +1878,7 @@ fn clear_cache_before_launch(root: &Path, enabled: bool) -> Result<(), String> {
 fn launch_game(app: tauri::AppHandle, settings: LauncherSettings) -> Result<(), String> {
     let executable = game_executable_from_settings(&settings)?;
     if !executable.is_file() {
-        return Err("Esteria is not installed yet. Run Install/Update first.".to_string());
+        return Err("WHE is not installed yet. Run Install/Update first.".to_string());
     }
     if is_game_running() {
         return Err("World of Warcraft is already running.".to_string());
@@ -1824,10 +1894,20 @@ fn launch_game(app: tauri::AppHandle, settings: LauncherSettings) -> Result<(), 
     }
     clear_cache_before_launch(&root, settings.clear_cache)?;
 
-    let mut child = Command::new(&executable)
-        .current_dir(&root)
+    let mut command = Command::new(&executable);
+    command.current_dir(&root);
+    if settings.auto_login {
+        if let Some(saved) = login::load() {
+            command.args(["-login", &saved.account, "-password", &saved.password]);
+            command.args(["-realmlist", settings.realm_host.trim()]);
+            if !settings.realm_name.trim().is_empty() {
+                command.args(["-realmname", settings.realm_name.trim()]);
+            }
+        }
+    }
+    let mut child = command
         .spawn()
-        .map_err(|error| format!("Could not launch Esteria: {error}"))?;
+        .map_err(|error| format!("Could not launch WHE: {error}"))?;
 
     if settings.minimize_on_play {
         if let Some(window) = app.get_webview_window("main") {
@@ -1856,7 +1936,7 @@ async fn verify_installation(
     settings: LauncherSettings,
 ) -> Result<VerificationResult, String> {
     let root = game_root_from_settings(&settings, true)?;
-    let client_installed = root.join("Wow.exe").is_file();
+    let client_installed = root.join("WowClient64.exe").is_file();
     if settings.manifest_source.trim().is_empty() {
         return Ok(VerificationResult {
             manifest_version: None,
@@ -1947,6 +2027,15 @@ async fn verify_installation(
         }
     }
 
+    for path in stale_files(&root, &manifest)? {
+        corrupt += 1;
+        issues.push(FileIssue {
+            path,
+            kind: "stale".to_string(),
+            detail: "File is no longer part of the client.".to_string(),
+        });
+    }
+
     let _ = save_hash_cache(&cache);
     emit_patch_progress(
         &app,
@@ -1967,7 +2056,7 @@ async fn verify_installation(
         corrupt_files: corrupt,
         up_to_date: missing == 0 && corrupt == 0,
         manifest_configured: true,
-        client_installed: root.join("Wow.exe").is_file(),
+        client_installed: root.join("WowClient64.exe").is_file(),
         install_root: root.to_string_lossy().to_string(),
         issues,
     })
@@ -2075,6 +2164,12 @@ async fn repair_installation(
     let total = manifest.files.len();
     let mut cache = load_hash_cache();
     let mut repair_indexes = Vec::new();
+    let stale = stale_files(&root, &manifest)?;
+    for path in &stale {
+        tokio::fs::remove_file(root.join(validate_relative_path(path)?))
+            .await
+            .map_err(|error| format!("Could not remove old file {path}: {error}"))?;
+    }
 
     for (index, file) in manifest.files.iter().enumerate() {
         if !file_matches(&root, file, &mut cache).await? {
@@ -2122,7 +2217,7 @@ async fn repair_installation(
         }
     }
 
-    let mut repaired = 0;
+    let mut repaired = stale.len();
     let skipped = total.saturating_sub(repair_indexes.len());
     let started = Instant::now();
     let mut completed_bytes = 0_u64;
@@ -2247,7 +2342,7 @@ async fn repair_installation(
         repaired_files: repaired,
         skipped_files: skipped,
         total_files: total,
-        client_installed: root.join("Wow.exe").is_file(),
+        client_installed: root.join("WowClient64.exe").is_file(),
     })
 }
 
@@ -2368,7 +2463,7 @@ async fn remove_addon(
         let (catalog, _) = load_addon_catalog(&settings.addon_catalog_source).await?;
         if let Some(addon) = catalog.addons.iter().find(|addon| addon.id == addon_id) {
             if addon.required {
-                return Err(format!("{} is required by Esteria and cannot be removed.", addon.name));
+                return Err(format!("{} is required by WHE and cannot be removed.", addon.name));
             }
         }
     }
@@ -2569,17 +2664,17 @@ struct PickedFile {
     data_base64: String,
 }
 
-/// Remembers the Esteria account session so presence, friends, chat, and the
+/// Remembers the WHE account session so presence, friends, chat, and the
 /// profile picture survive a launcher restart. The token is the only secret.
 #[tauri::command]
 fn save_account_session(session: AccountSession) -> Result<SocialState, String> {
     let token = session.token.trim().to_string();
     if token.is_empty() {
-        return Err("The Esteria account session did not include a token.".to_string());
+        return Err("The WHE account session did not include a token.".to_string());
     }
     let username = session.username.trim().to_lowercase().chars().take(20).collect::<String>();
     if username.is_empty() {
-        return Err("The Esteria account session did not include an account name.".to_string());
+        return Err("The WHE account session did not include an account name.".to_string());
     }
     let mut display_name: String = session.display_name.trim().chars().take(32).collect();
     if display_name.is_empty() {
@@ -2618,13 +2713,13 @@ struct UploadKind {
 fn pick_upload(kind: String) -> Result<Option<PickedFile>, String> {
     let spec = match kind.as_str() {
         "avatar" => UploadKind {
-            title: "Choose an Esteria profile picture",
+            title: "Choose an WHE profile picture",
             filters: &["png", "jpg", "jpeg", "webp", "gif"],
             error: "Profile pictures must be PNG, JPEG, WebP, or GIF images.",
             limit: 8 * 1024 * 1024,
         },
         "header" => UploadKind {
-            title: "Choose an Esteria profile header",
+            title: "Choose an WHE profile header",
             filters: &["png", "jpg", "jpeg", "webp", "gif"],
             error: "Profile headers must be PNG, JPEG, WebP, or GIF images.",
             limit: 16 * 1024 * 1024,
@@ -2707,7 +2802,7 @@ fn launcher_diagnostics(settings: LauncherSettings) -> serde_json::Value {
         "launcherVersion": env!("CARGO_PKG_VERSION"),
         "channel": settings.channel,
         "installRoot": root.as_ref().map(|path| path.to_string_lossy().to_string()),
-        "wowExists": root.as_ref().map(|path| path.join("Wow.exe").is_file()).unwrap_or(false),
+        "wowExists": root.as_ref().map(|path| path.join("WowClient64.exe").is_file()).unwrap_or(false),
         "settingsPath": settings_path().ok().map(|path| path.to_string_lossy().to_string()),
         "hashCachePath": hash_cache_path().ok().map(|path| path.to_string_lossy().to_string()),
         "socialStatePath": social_state_path().ok().map(|path| path.to_string_lossy().to_string()),
@@ -2720,7 +2815,7 @@ fn launcher_diagnostics(settings: LauncherSettings) -> serde_json::Value {
 fn open_install_directory(settings: LauncherSettings) -> Result<(), String> {
     let root = game_root_from_settings(&settings, false)?;
     if !root.exists() {
-        return Err("The selected Esteria install folder does not exist yet.".to_string());
+        return Err("The selected WHE install folder does not exist yet.".to_string());
     }
     Command::new("explorer")
         .arg(&root)
@@ -2846,11 +2941,11 @@ fn reveal_main_window(app: &tauri::AppHandle) {
 }
 
 fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
-    let open = MenuItem::with_id(app, "open", "Open Esteria Launcher", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit Esteria Launcher", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", "Open WHE Launcher", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit WHE Launcher", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &quit])?;
     let mut builder = TrayIconBuilder::with_id("esteria-tray")
-        .tooltip("Esteria Launcher")
+        .tooltip("WHE Launcher")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -2968,6 +3063,10 @@ fn main() {
             get_settings,
             save_settings,
             detect_game_path,
+            default_install_path,
+            login::get_saved_login,
+            login::save_game_login,
+            login::clear_game_login,
             choose_install_directory,
             launch_game,
             is_game_running,
@@ -3021,7 +3120,7 @@ fn main() {
             runtime_info
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Esteria Launcher");
+        .expect("error while running WHE Launcher");
 }
 
 #[cfg(test)]
@@ -3029,6 +3128,38 @@ mod tests {
     use super::*;
     use std::io::Write;
     use tempfile::tempdir;
+
+    fn prune_manifest(prune: &[&str], files: &[&str]) -> PatchManifest {
+        let files: Vec<_> = files.iter().map(|path| serde_json::json!({ "path": path, "sha256": "00" })).collect();
+        serde_json::from_value(serde_json::json!({ "version": "1", "files": files, "prune": prune })).unwrap()
+    }
+
+    #[test]
+    fn stale_files_only_reports_unlisted_files_in_prune_folders() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join("Data/patch-A.MPQ/Sub")).unwrap();
+        fs::create_dir_all(root.join("Data/Other")).unwrap();
+        fs::write(root.join("Data/patch-A.MPQ/Sub/Kept.blp"), b"x").unwrap();
+        fs::write(root.join("Data/patch-A.MPQ/Sub/Old.blp"), b"x").unwrap();
+        fs::write(root.join("Data/Other/Mine.txt"), b"x").unwrap();
+        let manifest = prune_manifest(&["Data/patch-A.MPQ"], &["data/PATCH-A.mpq/sub/kept.BLP"]);
+        assert_eq!(stale_files(root, &manifest).unwrap(), vec!["Data/patch-A.MPQ/Sub/Old.blp".to_string()]);
+    }
+
+    #[test]
+    fn stale_files_refuses_folders_outside_data() {
+        let dir = tempfile::tempdir().unwrap();
+        for folder in ["WTF", "Data", ".", "../Data/x", "Interface/AddOns"] {
+            assert!(stale_files(dir.path(), &prune_manifest(&[folder], &[])).is_err(), "{folder}");
+        }
+    }
+
+    #[test]
+    fn stale_files_ignores_missing_folders() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(stale_files(dir.path(), &prune_manifest(&["Data/patch-A.MPQ"], &[])).unwrap().is_empty());
+    }
 
     #[test]
     fn clear_cache_defaults_on_and_preserves_saved_choice() {
@@ -3067,7 +3198,7 @@ mod tests {
     #[test]
     fn manifest_paths_reject_parent_traversal() {
         assert!(validate_relative_path("Data/patch-E.mpq").is_ok());
-        assert!(validate_relative_path("../Wow.exe").is_err());
+        assert!(validate_relative_path("../WowClient64.exe").is_err());
         assert!(validate_relative_path("Data/../../Windows/system.ini").is_err());
         assert!(validate_relative_path("C:\\Windows\\system.ini").is_err());
     }
@@ -3100,9 +3231,9 @@ mod tests {
     #[test]
     fn install_path_accepts_folder_or_legacy_wow_exe() {
         let temp = tempdir().expect("tempdir");
-        let root = temp.path().join("Esteria");
+        let root = temp.path().join("WHE");
         fs::create_dir_all(&root).expect("create install root");
-        let wow = root.join("Wow.exe");
+        let wow = root.join("WowClient64.exe");
         fs::write(&wow, b"fixture").expect("write wow");
 
         assert_eq!(normalize_install_root(root.to_string_lossy().as_ref()).unwrap(), root);
@@ -3115,7 +3246,7 @@ mod tests {
             ResourceOrigin::Remote(url) => assert_eq!(url.scheme(), "https"),
             _ => panic!("expected remote"),
         }
-        match parse_resource_origin("C:\\Esteria\\manifest.json").expect("local") {
+        match parse_resource_origin("C:\\WHE\\manifest.json").expect("local") {
             ResourceOrigin::Local(path) => assert!(path.ends_with("manifest.json")),
             _ => panic!("expected local"),
         }
@@ -3241,7 +3372,7 @@ mod tests {
     #[test]
     fn config_wtf_updates_server_values_without_erasing_player_settings() {
         let temp = tempdir().expect("tempdir");
-        let root = temp.path().join("Esteria");
+        let root = temp.path().join("WHE");
         fs::create_dir_all(root.join("WTF")).expect("create WTF");
         fs::write(
             root.join("WTF").join("Config.wtf"),

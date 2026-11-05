@@ -17,8 +17,8 @@ fn move_tree(src: &Path, dst: &Path) -> Result<(), String> {
     fs::create_dir_all(dst).map_err(|error| format!("Could not create {}: {error}", dst.display()))?;
     let mut entries = fs::read_dir(src).map_err(|error| format!("Could not read {}: {error}", src.display()))?
         .collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())?;
-    // Wow.exe marks an installed client; promote it only after all other files succeed.
-    entries.sort_by_key(|entry| entry.file_name().eq_ignore_ascii_case("Wow.exe"));
+    // WowClient64.exe marks an installed client; promote it only after all other files succeed.
+    entries.sort_by_key(|entry| entry.file_name().eq_ignore_ascii_case("WowClient64.exe"));
     for entry in entries {
         let from = entry.path();
         let to = dst.join(entry.file_name());
@@ -46,16 +46,16 @@ fn source_promotion_preserves_launcher_state_and_installs_executable_last() {
     let target = temp.path().join("installed");
     fs::create_dir_all(source.join(".launcher")).unwrap();
     fs::create_dir_all(target.join(".launcher")).unwrap();
-    fs::write(source.join("Wow.exe"), b"client").unwrap();
+    fs::write(source.join("WowClient64.exe"), b"client").unwrap();
     fs::write(target.join(".launcher/state.json"), b"keep").unwrap();
     assert!(move_tree(&source, &target).is_err());
-    assert!(!target.join("Wow.exe").exists());
+    assert!(!target.join("WowClient64.exe").exists());
     assert_eq!(fs::read(target.join(".launcher/state.json")).unwrap(), b"keep");
     fs::remove_dir(source.join(".launcher")).unwrap();
     fs::create_dir_all(source.join("Data")).unwrap();
     fs::write(source.join("Data/patch.mpq"), b"patch").unwrap();
     move_tree(&source, &target).unwrap();
-    assert_eq!(fs::read(target.join("Wow.exe")).unwrap(), b"client");
+    assert_eq!(fs::read(target.join("WowClient64.exe")).unwrap(), b"client");
     assert_eq!(fs::read(target.join("Data/patch.mpq")).unwrap(), b"patch");
 }
 
@@ -70,7 +70,7 @@ pub async fn install_from_source(app: tauri::AppHandle, settings: LauncherSettin
         return Err("Use an HTTP(S) .zip or .torrent link, or a magnet link.".to_string());
     }
     let root = game_root_from_settings(&settings, true)?;
-    if root.join("Wow.exe").is_file() {
+    if root.join("WowClient64.exe").is_file() {
         return Ok(false);
     }
     PAUSED.store(false, Ordering::SeqCst);
@@ -110,13 +110,13 @@ pub async fn install_from_source(app: tauri::AppHandle, settings: LauncherSettin
     } else { downloaded };
 
     let mut source = staged.clone();
-    if !source.join("Wow.exe").is_file() {
+    if !source.join("WowClient64.exe").is_file() {
         let nested = fs::read_dir(&staged)
             .map_err(|error| error.to_string())?
             .flatten()
             .map(|entry| entry.path())
-            .find(|path| path.join("Wow.exe").is_file());
-        source = nested.ok_or_else(|| "The downloaded archive does not contain Wow.exe.".to_string())?;
+            .find(|path| path.join("WowClient64.exe").is_file());
+        source = nested.ok_or_else(|| "The downloaded archive does not contain WowClient64.exe.".to_string())?;
     }
     move_tree(&source, &root)?;
     let _ = fs::remove_dir_all(&work);

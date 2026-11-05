@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Esteria Launcher",
+  "productName": "WHE Launcher",
   "version": "0.8.6",
-  "identifier": "gg.esteria.launcher",
+  "identifier": "gg.whe.launcher",
   "build": {
     "frontendDist": "../ui"
   },
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Esteria Launcher",
+        "title": "WHE Launcher",
         "width": 1540,
         "height": 960,
         "minWidth": 1050,
@@ -22,7 +22,7 @@
       },
       {
         "label": "chat",
-        "title": "Esteria Chat",
+        "title": "WHE Chat",
         "url": "chat.html",
         "width": 460,
         "height": 680,
@@ -43,14 +43,14 @@
     "createUpdaterArtifacts": true,
     "targets": ["msi", "nsis"],
     "icon": ["icons/icon.ico"],
-    "shortDescription": "Esteria desktop launcher",
-    "longDescription": "Launch, update, and follow development news for Esteria."
+    "shortDescription": "WHE desktop launcher",
+    "longDescription": "Launch, update, and follow development news for WHE."
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENDN0ExNjA2NjAzMTQ0NjcKUldSblJERmdCaFo2ekJwU3VOcWhoUzhRT29BSGhhWWhubXp1UmZMQlp3REVwS05DRGRRcTRaVmcK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVERDUxRTQwMEYwNUE0NkEKUldScXBBVVBRQjdWN1c4NG1oSGJyZ1gxdzRZM0lZWHNsVmdHV0J0M1lKWnVUeUVoeTMyTW5NZ2gK",
       "endpoints": [
-        "http://planetkai.hopto.org:7384/launcher-updates/latest.json"
+        "http://100.110.63.66:7384/launcher-updates/latest.json"
       ],
       "dangerousInsecureTransportProtocol": true,
       "windows": {

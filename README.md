@@ -1,5 +1,7 @@
 # Esteria Launcher
 
+> **This is the WHE fork.** It is repointed at the WHE client and hosted over Tailscale. See [docs/whe-setup.md](docs/whe-setup.md). The rest of this README describes the upstream Esteria launcher.
+
 ![Launcher](https://raw.githubusercontent.com/STRHercules/WoWLauncher/refs/heads/main/assets/pics/Previews/launcher.png)
 
 A Battle.net-style desktop launcher for **Esteria**, a custom World of Warcraft 3.3.5a server. It installs and repairs the game client, launches it, manages add-ons, and gives players a unified Account page, character stats, an armory, a world database, screenshots, news, patch notes and a friends/chat network, all in one window.

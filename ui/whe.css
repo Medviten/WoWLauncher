@@ -1,0 +1,29 @@
+/* WHE: hides the features that need Esteria's social service or mod-launcher-api. */
+.primary-nav-item[data-nav="community"],
+.primary-nav-more,
+#allGamesButton,
+#armoryTabButton,
+#databaseTabButton,
+#accountTabButton,
+#statsTabButton,
+#linksNavButton,
+.social-panel,
+label:has(#discordPresenceInput) {
+  display: none !important;
+}
+
+.app-shell { grid-template-columns: minmax(0, 1fr); }
+
+.news-grid:empty { display: none; }
+.section-heading:has(+ .news-grid:empty) { display: none; }
+
+.whe-setup-path { grid-template-columns: minmax(0, 1fr) auto; }
+
+.whe-advanced { margin-top: 16px; }
+.whe-advanced > summary { cursor: pointer; color: #a8afb9; font-weight: 700; }
+
+/* The stock sign-in tabs set display, which beats the hidden attribute. */
+.auth-content [hidden] { display: none !important; }
+
+/* Replaces upstream's sign-in background, which carries Esteria's logo. */
+.auth-art { background: linear-gradient(rgba(10, 12, 16, .35), rgba(10, 12, 16, .75)), url("./assets/hero-world.svg") center / cover no-repeat !important; }

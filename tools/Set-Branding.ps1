@@ -70,7 +70,7 @@ if ($previousName -eq $Name -and $previousIdentifier -eq $Identifier -and [strin
     return
 }
 
-# The executable keeps the Cargo package name (esteria-launcher.exe), so only mixed-case
+# The executable keeps the Cargo package name (whe-launcher.exe), so only mixed-case
 # display text and the application ID change here.
 $replacements = [ordered]@{}
 if ($previousName -and $previousName -ne $Name) { $replacements[$previousName] = $Name }

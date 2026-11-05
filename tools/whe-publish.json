@@ -1,0 +1,20 @@
+{
+  "client": "C:/Users/Medviten/Desktop/WowSquished-256-bit",
+  "stage": "D:/wow-scratch/whe-cdn",
+  "sshHost": "medviten@100.110.63.66",
+  "remoteRoot": "/srv/wow-cdn",
+  "channel": "live",
+  "files": ["WowClient64.exe", "XvidDecoder.dll", "OpenAL64.dll", "Data/*.mpq", "Data/*.MPQ"],
+  "folders": ["Data/enUS", "Data/DBFilesClient", "Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/Retail", "Interface"],
+  "exclude": ["Data/Retail/Cache/*", "*.log", "*.pdb", "*.zip", "Thumbs.db", "desktop.ini", ".git*"],
+  "extras": {
+    "msvcp140.dll": "C:/Windows/System32/msvcp140.dll",
+    "vcruntime140.dll": "C:/Windows/System32/vcruntime140.dll",
+    "vcruntime140_1.dll": "C:/Windows/System32/vcruntime140_1.dll"
+  },
+  "bundleRoots": ["Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/Retail/Pack", "Data/enUS", "Interface"],
+  "loose": ["Data/patch-A.MPQ/DBFilesClient", "Data/patch-B.MPQ/DBFilesClient"],
+  "bundleMaxMB": 150,
+  "bundleMinFiles": 16,
+  "prune": ["Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/DBFilesClient"]
+}

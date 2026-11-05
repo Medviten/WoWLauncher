@@ -3,9 +3,9 @@ param(
     [string]$UpdatesRoot,
 
     [string]$BundleRoot = '',
-    [string]$BaseUrl = 'http://planetkai.hopto.org:7384/launcher-updates/',
+    [string]$BaseUrl = 'http://100.110.63.66:7384/launcher-updates/',
     [string]$Version = '',
-    [string]$Notes = 'Esteria Launcher update'
+    [string]$Notes = 'WHE Launcher update'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -61,7 +61,7 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($tempPath, $json, $utf8NoBom)
 Move-Item -LiteralPath $tempPath -Destination $latestPath -Force
 
-Write-Output "Published Esteria Launcher $Version"
+Write-Output "Published WHE Launcher $Version"
 Write-Output "Installer: $destinationInstaller"
 Write-Output "Signature: $destinationInstaller.sig"
 Write-Output "Metadata: $latestPath"

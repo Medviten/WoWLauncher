@@ -4,26 +4,29 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const DEFAULT_SETTINGS = {
   gamePath: '',
   channel: 'live',
-  manifestSource: 'http://planetkai.hopto.org:7384/api/v2/client/live/manifest.json',
-  addonCatalogSource: 'http://planetkai.hopto.org:7384/api/v2/addons/catalog.json',
-  newsSource: 'http://planetkai.hopto.org:7384/api/v2/news.json',
-  statusSource: 'http://planetkai.hopto.org:7384/api/v2/status',
-  socialSource: 'http://planetkai.hopto.org:7384/api/v2/social.json',
-  accountApi: 'http://planetkai.hopto.org:7384',
-  gameApi: 'http://planetkai.hopto.org:8095',
+  manifestSource: 'http://100.110.63.66:7384/client/live/manifest.json',
+  addonCatalogSource: 'http://100.110.63.66:7384/addons/catalog.json',
+  newsSource: 'http://100.110.63.66:7384/news.json',
+  statusSource: '',
+  socialSource: '',
+  accountApi: '',
+  gameApi: '',
   clientSource: '',
-  discordPresence: true,
+  discordPresence: false,
   discordClientId: '',
-  armorySource: 'http://planetkai.hopto.org:7384/api/v2/armory/characters.json',
-  databaseSource: 'http://planetkai.hopto.org:7384/api/v2/database/index.json',
+  armorySource: '',
+  databaseSource: '',
   autoUpdateAddons: true,
-  realmHost: 'planetkai.hopto.org',
+  realmHost: '100.110.63.66',
   realmPort: 3724,
-  patchList: 'planetkai.hopto.org',
+  realmName: '256-bit',
+  autoLogin: false,
+  setupComplete: false,
+  patchList: '100.110.63.66',
   cleanWdb: true,
   clearCache: true,
   closeAction: 'ask',
-  playAction: 'ask'
+  playAction: 'minimize'
 };
 
 const appState = {
@@ -42,7 +45,7 @@ const appState = {
   featuredNewsUrl: '',
   showingAddons: false,
   activeView: 'home',
-  authenticated: false,
+  authenticated: true,
   social: null,
   socialSnapshot: null,
   accountFeed: null,
@@ -112,7 +115,7 @@ function formatBytes(value) {
 function serviceError(error) {
   const text = String(error);
   return /error sending request|timed out|connection/i.test(text)
-    ? 'the Esteria web service is not responding. It may be offline; try again later.'
+    ? 'the WHE web service is not responding. It may be offline; try again later.'
     : text;
 }
 
@@ -188,21 +191,9 @@ navButtons.forEach((button) => {
 let slides = [
   {
     className: 'hero-art-one',
-    kicker: 'World Update',
-    title: 'The gates of Esteria are open',
-    body: 'Explore a custom Wrath-era world with new races, systems, and adventures built for Esteria.'
-  },
-  {
-    className: 'hero-art-two',
-    kicker: 'Playable Races',
-    title: 'A larger world needs more heroes',
-    body: 'Custom races and character options bring new identities to Azeroth while preserving the feel of Wrath of the Lich King.'
-  },
-  {
-    className: 'hero-art-three',
-    kicker: 'Launcher Preview',
-    title: 'One home for every Esteria update',
-    body: 'Install the client, check patch status, read development news, and keep your install ready to play.'
+    kicker: 'Test realm',
+    title: 'Worgoblin High Elf',
+    body: 'Custom races on a Wrath of the Lich King client. The launcher keeps your game files up to date.'
   }
 ];
 
@@ -242,7 +233,7 @@ function setHeroFromNews(items) {
   slides = items.slice(0, 3).map((item, index) => ({
     className: arts[index % arts.length],
     kicker: item.category || 'News',
-    title: item.title || 'Esteria update',
+    title: item.title || 'WHE update',
     body: item.summary || '',
     item
   }));
@@ -295,7 +286,7 @@ function renderNews(items) {
       : '';
     meta.textContent = [item.category || 'News', dateText].filter(Boolean).join(' · ');
     const title = document.createElement('h3');
-    title.textContent = item.title || 'Esteria update';
+    title.textContent = item.title || 'WHE update';
     const summary = document.createElement('p');
     summary.textContent = item.summary || '';
     body.append(meta, title, summary);
@@ -375,7 +366,7 @@ function accountApiBase() {
 
 async function accountRequest(path, { method = 'GET', body, token } = {}) {
   const base = token === '' ? String(appState.settings.accountApi || '').trim().replace(/\/+$/, '') : accountApiBase();
-  if (!base) throw new Error('Set the Esteria account API address in settings first.');
+  if (!base) throw new Error('Set the WHE account API address in settings first.');
   const authToken = token ?? accountSession()?.token;
   const response = await fetch(`${base}${path}`, {
     method,
@@ -388,7 +379,7 @@ async function accountRequest(path, { method = 'GET', body, token } = {}) {
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = new Error(payload?.message || `Esteria account request failed (${response.status}).`);
+    const error = new Error(payload?.message || `WHE account request failed (${response.status}).`);
     error.code = payload?.error;
     error.status = response.status;
     if (response.status === 401 && authToken === accountSession()?.token && !['/api/v2/account/login', '/api/v2/account/register', '/api/v2/account/password'].includes(path)) {
@@ -518,7 +509,7 @@ async function refreshAccountFeed({ publish = true } = {}) {
     });
     if (accountSession()?.token === session.token) appState.accountFeed = feed;
   } catch (error) {
-    console.warn('Could not refresh the Esteria account feed', error);
+    console.warn('Could not refresh the WHE account feed', error);
   }
   return appState.accountFeed;
 }
@@ -800,7 +791,7 @@ async function installLauncherUpdate() {
 $('#installLauncherUpdateButton').addEventListener('click', installLauncherUpdate);
 
 function syncAccountGate() {
-  const required = !appState.authenticated;
+  const required = !appState.settings.setupComplete;
   document.body.classList.toggle('auth-required', required);
   $('#authScreen').hidden = !required;
   $('.primary-shell').inert = required;
@@ -814,7 +805,7 @@ function renderAccountPanel() {
   const name = me?.displayName || session?.displayName || session?.username || 'Your profile';
   $('#accountName').textContent = name;
   $('#accountGameLink').textContent = session && me?.gameAccount ? `@${session.username} · Game account ${me.gameAccount}` : '';
-  $('#accountHint').textContent = me?.statusMessage || 'One account for Esteria and the game.';
+  $('#accountHint').textContent = me?.statusMessage || 'One account for WHE and the game.';
   applyAvatar($('#accountAvatar'), absoluteAvatarUrl(me?.avatarUrl), name.slice(0, 2).toUpperCase());
   const cover = $('#accountCover');
   cover.replaceChildren();
@@ -835,7 +826,7 @@ function setAuthMode(register) {
   $('#authLoginTab').setAttribute('aria-pressed', String(!register));
   $('#authRegisterTab').setAttribute('aria-pressed', String(register));
   $('#accountLoginButton').textContent = register ? 'Create account' : 'Sign in';
-  $('#authTitle').textContent = register ? 'Create your Esteria account' : 'Welcome to Esteria';
+  $('#authTitle').textContent = register ? 'Create your WHE account' : 'Welcome to WHE';
   $('#authDescription').textContent = register ? 'Start your journey with one account for everything.' : 'Sign in with your game account to continue.';
   $('#accountPasswordInput').autocomplete = register ? 'new-password' : 'current-password';
   $('#accountPasswordInput').maxLength = register ? 16 : 128;
@@ -891,7 +882,7 @@ async function signInAccount() {
     renderSocialPanel();
     restoreMainView();
     await Promise.all([refreshGamePresence(), refreshAccountFeed({ publish: false })]);
-    showToast(authRegister ? 'Account created. Welcome to Esteria!' : `Welcome back, ${account.displayName}.`);
+    showToast(authRegister ? 'Account created. Welcome to WHE!' : `Welcome back, ${account.displayName}.`);
   } catch (error) {
     errorNode.textContent = error.message || String(error);
     errorNode.hidden = false;
@@ -935,7 +926,7 @@ async function signOutAccount() {
   setAuthMode(false);
   $('#accountPasswordInput').value = '';
   $('#accountUsernameInput').focus();
-  showToast(clearFailed ? 'Signed out, but the saved session could not be removed from disk. Check local storage permissions.' : 'Signed out of Esteria.', clearFailed ? 8000 : 2800);
+  showToast(clearFailed ? 'Signed out, but the saved session could not be removed from disk. Check local storage permissions.' : 'Signed out of WHE.', clearFailed ? 8000 : 2800);
 }
 
 async function uploadAccountAvatar() {
@@ -1140,7 +1131,7 @@ function hideFriendMenu() {
 
 async function setFriendNickname(name) {
   if (!accountSession()) {
-    showToast('Sign in to your Esteria account to set nicknames.');
+    showToast('Sign in to your WHE account to set nicknames.');
     return;
   }
   const current = friendRecord(name).note;
@@ -1161,7 +1152,7 @@ async function setFriendNickname(name) {
 
 async function setFriendFavorite(name, favorite) {
   if (!accountSession()) {
-    showToast('Sign in to your Esteria account to manage favorites.');
+    showToast('Sign in to your WHE account to manage favorites.');
     return;
   }
   try {
@@ -1179,7 +1170,7 @@ async function setFriendFavorite(name, favorite) {
 
 async function uploadHeader() {
   if (!accountSession()) {
-    showToast('Sign in to your Esteria account to set a profile header.');
+    showToast('Sign in to your WHE account to set a profile header.');
     return;
   }
   const picked = await invokeTauri('pick_upload', { kind: 'header' });
@@ -1221,7 +1212,7 @@ async function refreshCommunity() {
     feed.replaceChildren();
     const note = document.createElement('div');
     note.className = 'empty-detail';
-    note.textContent = 'Sign in to your Esteria account to post updates friends can see.';
+    note.textContent = 'Sign in to your WHE account to post updates friends can see.';
     feed.append(note);
     return;
   }
@@ -1306,7 +1297,7 @@ async function attachPostMedia() {
 
 async function publishPost() {
   if (!accountSession()) {
-    showToast('Sign in to your Esteria account to post.');
+    showToast('Sign in to your WHE account to post.');
     return;
   }
   const body = $('#postBodyInput').value.trim();
@@ -1405,7 +1396,7 @@ async function startGame(action) {
     const result = await invokeTauri('launch_game', { settings: appState.settings });
     appState.gameRunning = true;
     await syncDiscord();
-    showToast(result === null ? 'Desktop launch hook is ready.' : 'Esteria has closed.');
+    showToast(result === null ? 'Desktop launch hook is ready.' : 'WHE has closed.');
   } catch (error) {
     await invokeTauri('show_main_window').catch(console.warn);
     showToast(String(error), 5200);
@@ -1593,8 +1584,8 @@ async function saveSocialSettings() {
 
 function updateFriendDialogHint() {
   $('#friendHint').textContent = accountSession()
-    ? 'Search Esteria accounts by name. Requests reach the other player the next time they sign in.'
-    : 'Sign in to your Esteria account to find players. Without an account, friends stay on this PC and are matched against the shared presence snapshot.';
+    ? 'Search WHE accounts by name. Requests reach the other player the next time they sign in.'
+    : 'Sign in to your WHE account to find players. Without an account, friends stay on this PC and are matched against the shared presence snapshot.';
 }
 
 function openFriendDialog() {
@@ -1733,8 +1724,8 @@ function renderChatDialog() {
 
 function updateChatNote() {
   $('#chatLocalNote').textContent = accountSession()
-    ? 'Chats are delivered through the Esteria account service and sync between devices.'
-    : 'Chat history persists on this PC. Sign in to your Esteria account to chat with players through the server.';
+    ? 'Chats are delivered through the WHE account service and sync between devices.'
+    : 'Chat history persists on this PC. Sign in to your WHE account to chat with players through the server.';
 }
 
 async function openChatDialog(friendName = null) {
@@ -1803,7 +1794,7 @@ $('#removeChatFriendButton').addEventListener('click', () => {
 $('#closeChatButton').addEventListener('click', closeChatDialog);
 $('#chatBackdrop').addEventListener('click', (event) => { if (event.target === $('#chatBackdrop')) closeChatDialog(); });
 $('#chatForm').addEventListener('submit', sendChatMessage);
-$('#accountAuthForm').addEventListener('submit', event => { event.preventDefault(); signInAccount(); });
+$('#accountAuthForm').addEventListener('submit', event => { event.preventDefault(); completeSetup(); });
 $('#authLoginTab').addEventListener('click', () => setAuthMode(false));
 $('#authRegisterTab').addEventListener('click', () => setAuthMode(true));
 $('#authSettingsButton').addEventListener('click', openSettings);
@@ -1853,6 +1844,8 @@ function populateSettingsForm() {
   autoUpdateAddonsInput.checked = appState.settings.autoUpdateAddons !== false;
   realmHostInput.value = appState.settings.realmHost || DEFAULT_SETTINGS.realmHost;
   realmPortInput.value = appState.settings.realmPort || DEFAULT_SETTINGS.realmPort;
+  $('#realmNameInput').value = appState.settings.realmName || '';
+  populateLoginForm();
   if (appState.runtimeInfo?.settingsPath) {
     $('#settingsLocation').textContent = `Settings: ${appState.runtimeInfo.settingsPath}`;
   }
@@ -1922,7 +1915,7 @@ $('#detectGameButton').addEventListener('click', async () => {
     const detected = await invokeTauri('detect_game_path');
     if (detected) {
       pathInput.value = detected;
-      showToast('Found an existing Esteria/WoW client.');
+      showToast('Found an existing WHE/WoW client.');
     } else {
       showToast('No existing client was detected. Browse to an empty folder to install a new copy.');
     }
@@ -1981,7 +1974,7 @@ versionSelect.addEventListener('change', async () => {
     if (saved) appState.settings = saved;
     await verifyInstallation({ silent: true });
     await refreshServerStatus();
-    showToast(`Switched to Esteria ${nextChannel === 'ptr' ? 'PTR' : 'Live'}.`);
+    showToast(`Switched to WHE ${nextChannel === 'ptr' ? 'PTR' : 'Live'}.`);
   } catch (error) {
     appState.settings = previousSettings;
     versionSelect.value = previousSettings.channel === 'ptr' ? 'ptr' : 'live';
@@ -2016,6 +2009,9 @@ $('#saveSettingsButton').addEventListener('click', async () => {
     autoUpdateAddons: autoUpdateAddonsInput.checked,
     realmHost: realmHostInput.value.trim() || DEFAULT_SETTINGS.realmHost,
     realmPort: port,
+    realmName: $('#realmNameInput').value.trim(),
+    autoLogin: appState.settings.autoLogin,
+    setupComplete: appState.settings.setupComplete,
     patchList: patchListInput.value.trim(),
     cleanWdb: cleanWdbInput.checked,
     clearCache: clearCacheInput.checked,
@@ -2025,6 +2021,7 @@ $('#saveSettingsButton').addEventListener('click', async () => {
   };
 
   try {
+    await saveLoginFromSettings(nextSettings);
     const saved = await invokeTauri('save_settings', { settings: nextSettings });
     appState.settings = saved || nextSettings;
     appState.verification = null;
@@ -2061,7 +2058,7 @@ async function refreshRealmStatus() {
     const result = await invokeTauri('check_realm', { settings: appState.settings });
     badge.classList.remove('is-checking');
     badge.classList.toggle('is-offline', !result.online);
-    text.textContent = result.online ? 'Realm online' : 'Realm offline';
+    text.textContent = result.online ? 'Realm online' : 'Realm offline · is Tailscale on?';
     badge.title = `${result.host}:${result.port} · ${result.detail}`;
   } catch (error) {
     badge.classList.remove('is-checking');
@@ -2081,7 +2078,7 @@ async function verifyInstallation({ silent = false } = {}) {
   if (!appState.settings.gamePath) {
     if (!silent) {
       openSettings();
-      showToast('Choose an Esteria install folder first.');
+      showToast('Choose an WHE install folder first.');
     }
     return null;
   }
@@ -2108,11 +2105,11 @@ async function verifyInstallation({ silent = false } = {}) {
         if (!silent) showToast('Client found. Add a client manifest to enable CDN updates and repair.');
       } else {
         setUpdateStatus('Client not installed');
-        if (!silent) showToast('Configure a client manifest so the launcher can install Esteria.');
+        if (!silent) showToast('Configure a client manifest so the launcher can install WHE.');
       }
     } else if (result.upToDate) {
       setUpdateStatus(`Up to date · ${result.manifestVersion || 'verified'}`);
-      if (!silent) showToast(`Verified ${result.checkedFiles} files. Esteria is up to date.`);
+      if (!silent) showToast(`Verified ${result.checkedFiles} files. WHE is up to date.`);
     } else {
       const broken = result.missingFiles + result.corruptFiles;
       const verb = result.clientInstalled ? 'need repair' : 'ready to install';
@@ -2121,7 +2118,7 @@ async function verifyInstallation({ silent = false } = {}) {
     }
     return result;
   } catch (error) {
-    setUpdateStatus('Update check failed');
+    setUpdateStatus(String(error).includes('Could not request') ? 'Server unreachable · is Tailscale on?' : 'Update check failed');
     if (!silent) showToast(String(error), 5200);
     return null;
   } finally {
@@ -2163,7 +2160,7 @@ async function autoUpdateManagedAddons({ silent = false } = {}) {
 async function repairInstallation() {
   if (appState.updateRunning) return;
   if (!appState.settings.manifestSource && !appState.settings.clientSource) {
-    showToast('Configure a client manifest or download link before installing or repairing Esteria.');
+    showToast('Configure a client manifest or download link before installing or repairing WHE.');
     openSettings();
     return;
   }
@@ -2285,7 +2282,7 @@ $('#downloadsButton').addEventListener('click', () => {
 playButton.addEventListener('click', async () => {
   if (!appState.settings.gamePath) {
     openSettings();
-    showToast('Choose an Esteria install folder first.');
+    showToast('Choose an WHE install folder first.');
     return;
   }
 
@@ -2293,6 +2290,9 @@ playButton.addEventListener('click', async () => {
     await repairInstallation();
     return;
   }
+
+  await syncIfStale();
+  if (appState.updateRunning || appState.needsRepair) return;
 
   const remembered = rememberedPlayAction();
   if (remembered === 'ask') {
@@ -2344,7 +2344,7 @@ function renderAddons() {
     meta.className = 'addon-meta';
     meta.textContent = [addon.category, addon.author ? `by ${addon.author}` : ''].filter(Boolean).join(' · ');
     const description = document.createElement('p');
-    description.textContent = addon.description || 'Managed Esteria add-on.';
+    description.textContent = addon.description || 'Managed WHE add-on.';
     const state = document.createElement('div');
     state.className = 'addon-state';
     if (addon.updateAvailable) {
@@ -2841,6 +2841,8 @@ async function initializeDesktopState() {
     }
 
     populateSettingsForm();
+    await prepareSetupScreen();
+    startBackgroundSync();
     if (runtimeInfo?.launcherVersion) $('#buildNumber').textContent = `Launcher ${runtimeInfo.launcherVersion}`;
     setUpdateStatus(appState.settings.gamePath ? 'Checking install…' : 'Select install location');
     updatePlayState();
@@ -2913,12 +2915,8 @@ async function initializeDesktopState() {
       checkLauncherUpdate({ silent: true })
     ]);
 
-    if (appState.settings.gamePath) {
-      setTimeout(async () => {
-        await verifyInstallation({ silent: true });
-        await installRequiredAddons({ silent: true });
-        await autoUpdateManagedAddons({ silent: true });
-      }, 350);
+    if (appState.settings.gamePath && appState.settings.setupComplete) {
+      setTimeout(() => syncClient(), 350);
     }
   } catch (error) {
     setUpdateStatus('Launcher initialization failed');

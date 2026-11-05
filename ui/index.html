@@ -4,16 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#171a20" />
-  <title>Esteria Launcher</title>
+  <title>WHE Launcher</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./whe.css" />
 </head>
 <body class="auth-required">
   <div class="app-shell">
     <header class="titlebar" data-tauri-drag-region>
       <div class="titlebar-left" data-tauri-drag-region>
-        <div class="brand" aria-label="Esteria">
+        <div class="brand" aria-label="WHE">
           <img src="./assets/esteria-icon.png" alt="" class="brand-mark" />
-          <span class="brand-name">Esteria</span>
+          <span class="brand-name">WHE</span>
         </div>
 
         <nav class="primary-nav" aria-label="Primary">
@@ -47,12 +48,12 @@
     </header>
 
     <section class="primary-shell">
-      <nav class="game-strip" aria-label="Esteria applications">
-        <button class="all-games-button" id="allGamesButton" type="button" title="Esteria is the only game for now">
+      <nav class="game-strip" aria-label="WHE applications">
+        <button class="all-games-button" id="allGamesButton" type="button" title="WHE is the only game for now">
           <span class="grid-icon" aria-hidden="true">⠿</span>
           <span>All Games</span>
         </button>
-        <button class="game-tab is-active" id="esteriaTabButton" type="button" aria-label="Esteria" data-view="home">
+        <button class="game-tab is-active" id="esteriaTabButton" type="button" aria-label="WHE" data-view="home">
           <img src="./assets/esteria-icon.png" alt="" />
         </button>
         <button class="game-tab" id="armoryTabButton" type="button" aria-label="Armory" title="Armory" data-view="armory"><img src="./assets/tab-armory.png" alt="" /></button>
@@ -66,7 +67,7 @@
       <div class="workspace">
         <aside class="game-sidebar">
           <div class="game-identity">
-            <img class="game-logo" src="./assets/esteria-wordmark.png" alt="Esteria" />
+            <img class="game-logo" src="./assets/whe-wordmark.svg" alt="WHE" />
             <button class="realm-badge" id="realmStatus" type="button" title="Check realm status"><span class="status-dot"></span> <span id="realmStatusText">Checking realm…</span></button>
             <div class="realm-detail" id="realmDetail">Loading server status…</div>
           </div>
@@ -98,8 +99,7 @@
 
           <label class="field-label" for="versionSelect">Game version</label>
           <select class="version-select" id="versionSelect">
-            <option value="live">Esteria Live · 3.3.5a</option>
-            <option value="ptr">Esteria PTR · 3.3.5a</option>
+            <option value="live">WHE · 3.3.5a</option>
           </select>
 
           <div class="launcher-update-banner" id="launcherUpdateBanner" hidden>
@@ -119,9 +119,9 @@
             <div class="hero-art hero-art-one" id="heroArt"></div>
             <div class="hero-overlay"></div>
             <div class="hero-copy">
-              <div class="hero-kicker" id="heroKicker">World Update</div>
-              <h1 id="heroTitle">The gates of Esteria are open</h1>
-              <p id="heroBody">Explore a custom Wrath-era world with new races, systems, and adventures built for Esteria.</p>
+              <div class="hero-kicker" id="heroKicker">Test realm</div>
+              <h1 id="heroTitle">Worgoblin High Elf</h1>
+              <p id="heroBody">Custom races on a Wrath of the Lich King client. The launcher keeps your game files up to date.</p>
               <button class="secondary-button" id="heroAction" type="button">Learn more</button>
             </div>
             <div class="hero-controls" aria-label="Featured stories">
@@ -133,35 +133,10 @@
 
           <section class="news-section" id="newsSection">
             <div class="section-heading">
-              <h2>Latest from Esteria</h2>
+              <h2>Latest from WHE</h2>
               <button type="button" id="newsViewAllButton">View all</button>
             </div>
-            <div class="news-grid" id="newsGrid">
-              <article class="news-card" tabindex="0">
-                <img src="./assets/news-races.svg" alt="Stylized silhouettes representing custom playable races" />
-                <div class="news-card-body">
-                  <div class="news-meta">Development</div>
-                  <h3>Custom races continue to expand</h3>
-                  <p>New character options, racials, and creation work are moving into the next launcher preview.</p>
-                </div>
-              </article>
-              <article class="news-card" tabindex="0">
-                <img src="./assets/news-world.svg" alt="Stylized fantasy landscape" />
-                <div class="news-card-body">
-                  <div class="news-meta">World</div>
-                  <h3>Echoes of the Worldsoul</h3>
-                  <p>Follow the latest work on Esteria's custom world content, encounters, and progression.</p>
-                </div>
-              </article>
-              <article class="news-card" tabindex="0">
-                <img src="./assets/news-launcher.svg" alt="Stylized launcher update interface" />
-                <div class="news-card-body">
-                  <div class="news-meta">Launcher</div>
-                  <h3>A new home for updates</h3>
-                  <p>This desktop launcher will handle client launch, patch status, news, and account-facing tools.</p>
-                </div>
-              </article>
-            </div>
+            <div class="news-grid" id="newsGrid"></div>
           </section>
 
           <section class="feed-section">
@@ -177,7 +152,7 @@
             <div class="addons-toolbar">
               <div>
                 <h2>Add-ons</h2>
-                <p>Install and update launcher-managed add-ons for this Esteria client.</p>
+                <p>Install and update launcher-managed add-ons for this WHE client.</p>
               </div>
               <div class="addons-toolbar-actions">
                 <button type="button" id="installRequiredAddonsButton">Install required</button>
@@ -193,7 +168,7 @@
             <div class="launcher-page-toolbar">
               <div>
                 <h2>Armory</h2>
-                <p>Search published Esteria character profiles without exposing realm database credentials.</p>
+                <p>Search published WHE character profiles without exposing realm database credentials.</p>
               </div>
               <button type="button" class="page-action" id="refreshArmoryButton">Refresh</button>
             </div>
@@ -212,7 +187,7 @@
             <div class="launcher-page-toolbar">
               <div>
                 <h2>World Database</h2>
-                <p>Search published items, quests, NPCs, spells, zones, and custom Esteria content.</p>
+                <p>Search published items, quests, NPCs, spells, zones, and custom WHE content.</p>
               </div>
               <button type="button" class="page-action" id="refreshDatabaseButton">Refresh</button>
             </div>
@@ -267,7 +242,7 @@
               <div class="account-cover" id="accountCover"></div>
               <div class="account-identity">
                 <span class="account-avatar" id="accountAvatar">?</span>
-                <div class="account-copy"><h2 id="accountName">Your profile</h2><span id="accountGameLink"></span><p id="accountHint">One account for Esteria and the game.</p></div>
+                <div class="account-copy"><h2 id="accountName">Your profile</h2><span id="accountGameLink"></span><p id="accountHint">One account for WHE and the game.</p></div>
                 <button class="dialog-secondary" id="accountLogoutButton" type="button">Sign out</button>
               </div>
               <form id="profileForm" class="account-profile-form">
@@ -395,21 +370,21 @@
             <div class="launcher-page-toolbar">
               <div>
                 <h2>Launcher Tools</h2>
-                <p>Repair, inspect, and maintain the local Esteria client.</p>
+                <p>Repair, inspect, and maintain the local WHE client.</p>
               </div>
               <button type="button" class="page-action" id="refreshDiagnosticsButton">Refresh diagnostics</button>
             </div>
             <div class="tools-grid">
               <button class="tool-card" type="button" id="toolVerifyButton"><strong>Verify client</strong><span>Check managed files against the active CDN manifest.</span></button>
               <button class="tool-card" type="button" id="toolRepairButton"><strong>Repair / update</strong><span>Download missing or corrupt client files.</span></button>
-              <button class="tool-card" type="button" id="toolOpenFolderButton"><strong>Open install folder</strong><span>Open the selected Esteria client directory.</span></button>
+              <button class="tool-card" type="button" id="toolOpenFolderButton"><strong>Open install folder</strong><span>Open the selected WHE client directory.</span></button>
               <button class="tool-card" type="button" data-client-folder="Interface\\AddOns"><strong>Open AddOns</strong><span>Jump directly to Interface\\AddOns.</span></button>
               <button class="tool-card" type="button" data-client-folder="Screenshots"><strong>Open Screenshots</strong><span>Open your local screenshot folder.</span></button>
               <button class="tool-card" type="button" data-client-folder="Logs"><strong>Open Logs</strong><span>Open the client logs directory.</span></button>
               <button class="tool-card" type="button" data-client-folder="WTF"><strong>Open WTF</strong><span>Inspect local client configuration and account settings.</span></button>
               <button class="tool-card" type="button" id="toolClearWdbButton"><strong>Clear WDB</strong><span>Remove cached server data before the next launch.</span></button>
               <button class="tool-card" type="button" id="toolClearCacheButton"><strong>Clear launcher cache</strong><span>Force file hashes to be recalculated on the next verification.</span></button>
-              <button class="tool-card" type="button" id="toolLauncherUpdateButton"><strong>Check launcher update</strong><span>Check for a newer signed Esteria Launcher release.</span></button>
+              <button class="tool-card" type="button" id="toolLauncherUpdateButton"><strong>Check launcher update</strong><span>Check for a newer signed WHE Launcher release.</span></button>
             </div>
             <div class="diagnostics-panel">
               <div class="diagnostics-heading"><h3>Diagnostics</h3><button type="button" id="copyDiagnosticsButton">Copy</button></div>
@@ -433,7 +408,7 @@
             <div class="launcher-page-toolbar">
               <div>
                 <h2>Community</h2>
-                <p>Join the Esteria community: ask questions, find groups, share screenshots and follow the news.</p>
+                <p>Join the WHE community: ask questions, find groups, share screenshots and follow the news.</p>
               </div>
             </div>
             <div class="link-cards" id="linkCards"></div>
@@ -443,7 +418,7 @@
             <div class="launcher-page-toolbar">
               <div>
                 <h2>Patch Notes</h2>
-                <p>What changed in Esteria, newest first.</p>
+                <p>What changed in WHE, newest first.</p>
               </div>
               <button type="button" class="page-action" id="refreshPatchNotesButton">Refresh</button>
             </div>
@@ -532,21 +507,28 @@
 
   <main class="auth-screen" id="authScreen" aria-labelledby="authTitle">
     <div class="auth-art" aria-hidden="true">
-      <div class="auth-art-copy"><h2>A world to call home.</h2><p>Your characters. Your friends. Your next adventure.</p></div>
+      <div class="auth-art-copy"><h2>Worgoblin High Elf</h2><p>Choose a folder, and the launcher does the rest.</p></div>
     </div>
     <section class="auth-content">
-      <img class="auth-mark" src="./assets/esteria-icon.png" alt="Esteria" />
-      <h1 id="authTitle">Welcome to Esteria</h1>
-      <p id="authDescription">Sign in with your game account to continue.</p>
-      <div class="auth-tabs" role="group" aria-label="Account access">
+      <img class="auth-mark" src="./assets/esteria-icon.png" alt="WHE" />
+      <h1 id="authTitle">Welcome to WHE</h1>
+      <p id="authDescription">Make sure Tailscale is connected, then choose where to install the game.</p>
+      <div class="auth-tabs" role="group" aria-label="Account access" hidden>
         <button id="authLoginTab" type="button" aria-pressed="true">Sign in</button>
         <button id="authRegisterTab" type="button" aria-pressed="false">Create account</button>
       </div>
       <form id="accountAuthForm">
-        <label for="accountUsernameInput">Account name</label>
-        <input id="accountUsernameInput" type="text" maxlength="17" autocomplete="username" spellcheck="false" required />
+        <label for="setupPathInput">Install folder</label>
+        <div class="path-row whe-setup-path">
+          <input id="setupPathInput" type="text" spellcheck="false" required />
+          <button class="field-button" id="setupBrowseButton" type="button">Browse</button>
+        </div>
+        <p class="auth-field-note" id="setupPathNote">About 20 GB of free space is needed.</p>
+        <label for="accountUsernameInput">Game account (optional)</label>
+        <input id="accountUsernameInput" type="text" maxlength="17" autocomplete="off" spellcheck="false" />
         <div class="auth-password-label"><label for="accountPasswordInput">Password</label><button id="authShowPassword" class="text-button" type="button" aria-pressed="false">Show</button></div>
-        <input id="accountPasswordInput" type="password" maxlength="128" autocomplete="current-password" required />
+        <input id="accountPasswordInput" type="password" maxlength="128" autocomplete="off" />
+        <p class="auth-field-note">Saved encrypted on this PC so the game logs you in. Leave blank to log in yourself.</p>
         <div id="authRegistration" hidden>
           <label for="accountConfirmInput">Confirm password</label>
           <input id="accountConfirmInput" type="password" maxlength="16" autocomplete="new-password" />
@@ -554,7 +536,7 @@
           <input id="accountEmailInput" type="email" maxlength="120" autocomplete="email" spellcheck="false" />
           <p class="auth-field-note">Account name: 3-17 letters or numbers. Password: 6-16 characters.</p>
         </div>
-        <details id="authLegacy">
+        <details id="authLegacy" hidden>
           <summary>Already have a separate launcher profile?</summary>
           <p>Verify it once to keep your friends, chats and profile. Enter your game account credentials above.</p>
           <label for="legacyUsernameInput">Previous launcher account name</label>
@@ -563,10 +545,10 @@
           <input id="legacyPasswordInput" type="password" autocomplete="off" maxlength="128" />
         </details>
         <p class="auth-error" id="authError" role="alert" hidden></p>
-        <button class="dialog-primary auth-submit" id="accountLoginButton" type="submit">Sign in</button>
+        <button class="dialog-primary auth-submit" id="accountLoginButton" type="submit">Install and continue</button>
       </form>
-      <p class="auth-shared-note">One account for the launcher and World of Warcraft: Esteria.</p>
-      <button class="text-button auth-settings" id="authSettingsButton" type="button">Connection settings</button>
+      
+      <button class="text-button auth-settings" id="authSettingsButton" type="button" hidden>Connection settings</button>
     </section>
   </main>
 
@@ -577,20 +559,31 @@
         <button id="closeSettingsButton" type="button" aria-label="Close settings">×</button>
       </div>
       <div class="dialog-body">
-        <label for="gamePathInput">Esteria install folder</label>
+        <label for="gamePathInput">WHE install folder</label>
         <div class="path-row">
-          <input id="gamePathInput" type="text" placeholder="C:\Games\Esteria" spellcheck="false" />
+          <input id="gamePathInput" type="text" placeholder="C:\Users\you\Games\WHE" spellcheck="false" />
           <button class="field-button" id="browseGameButton" type="button">Browse</button>
           <button class="field-button" id="detectGameButton" type="button">Detect</button>
         </div>
-        <p>This folder may be empty. The launcher can build a complete Esteria client here from your CDN.</p>
+        <p>This folder may be empty. The launcher can build a complete WHE client here from your CDN.</p>
         <div class="maintenance-actions">
           <button class="field-button" id="openGameFolderButton" type="button">Open folder</button>
           <button class="field-button" id="clearWdbButton" type="button">Clear WDB</button>
         </div>
 
+        <label for="loginAccountInput">Game account</label>
+        <input id="loginAccountInput" type="text" maxlength="17" autocomplete="off" spellcheck="false" />
+        <label for="loginPasswordInput">Password</label>
+        <input id="loginPasswordInput" type="password" maxlength="128" autocomplete="off" placeholder="Not saved" />
+        <div class="settings-options">
+          <label><input id="autoLoginInput" type="checkbox" /> Log in automatically when I press Play</label>
+        </div>
+        <p>The password is encrypted for your Windows account and stored only on this PC.</p>
+
+        <details class="whe-advanced">
+        <summary>Advanced</summary>
         <label for="manifestSourceInput">Client manifest</label>
-        <input id="manifestSourceInput" type="text" placeholder="https://cdn.example.com/api/v2/client/live/manifest.json" spellcheck="false" />
+        <input id="manifestSourceInput" type="text" placeholder="http://100.110.63.66:7384/client/live/manifest.json" spellcheck="false" />
         <p>The SHA-256 manifest controls client installation, verification, updates, and repair.</p>
 
         <label for="addonCatalogInput">Add-on catalog</label>
@@ -606,12 +599,12 @@
         <label for="socialSourceInput">Social presence snapshot</label>
         <input id="socialSourceInput" type="text" placeholder="https://cdn.example.com/api/v2/social.json" spellcheck="false" />
 
-        <label for="accountApiInput">Esteria account API</label>
-        <input id="accountApiInput" type="text" placeholder="http://planetkai.hopto.org:7384" spellcheck="false" />
+        <label for="accountApiInput">WHE account API</label>
+        <input id="accountApiInput" type="text" placeholder="Not used" spellcheck="false" />
         <p>Hosts the account, presence, friend, chat, and profile-picture endpoints used when you sign in.</p>
 
         <label for="gameApiInput">Game server API</label>
-        <input id="gameApiInput" type="text" placeholder="http://planetkai.hopto.org:8095" spellcheck="false" />
+        <input id="gameApiInput" type="text" placeholder="Not used" spellcheck="false" />
         <p>Address of the server's mod-launcher-api: game account creation, character management, and in-game presence.</p>
 
         <label for="clientSourceInput">Client download link (optional)</label>
@@ -625,7 +618,7 @@
         <input id="databaseSourceInput" type="text" placeholder="https://cdn.example.com/api/v2/database/index.json" spellcheck="false" />
 
         <label for="patchListInput">Patch list</label>
-        <input id="patchListInput" type="text" placeholder="patch.esteria.gg" spellcheck="false" />
+        <input id="patchListInput" type="text" placeholder="100.110.63.66" spellcheck="false" />
         <p>Optional. When set, the launcher writes this and your realm host into WTF\Config.wtf before Play.</p>
 
         <div class="settings-grid">
@@ -638,6 +631,9 @@
             <input id="realmPortInput" type="number" min="1" max="65535" value="3724" />
           </div>
         </div>
+        <label for="realmNameInput">Realm name</label>
+        <input id="realmNameInput" type="text" spellcheck="false" />
+        </details>
         <div class="settings-options">
           <label><input id="cleanWdbInput" type="checkbox" checked /> Clean WDB before launching</label>
           <label><input id="clearCacheInput" type="checkbox" checked /> Clear Cache before launching</label>
@@ -700,7 +696,7 @@
       <div class="dialog-body">
         <label for="friendNameInput">Player or character name</label>
         <input id="friendNameInput" type="text" maxlength="32" autocomplete="off" />
-        <p id="friendHint">Sign in to your Esteria account to find players. Without an account, friends are stored on this PC and matched against the shared presence snapshot.</p>
+        <p id="friendHint">Sign in to your WHE account to find players. Without an account, friends are stored on this PC and matched against the shared presence snapshot.</p>
         <div class="discover-results" id="discoverResults" hidden></div>
       </div>
       <div class="dialog-actions">
@@ -730,7 +726,7 @@
             <input id="chatInput" type="text" maxlength="1000" placeholder="Message" autocomplete="off" disabled />
             <button type="submit" id="sendChatButton" disabled>Send</button>
           </form>
-          <div class="chat-local-note" id="chatLocalNote">Chat history persists on this PC. Sign in to your Esteria account to chat with players through the server.</div>
+          <div class="chat-local-note" id="chatLocalNote">Chat history persists on this PC. Sign in to your WHE account to chat with players through the server.</div>
         </div>
       </div>
     </section>
@@ -765,7 +761,7 @@
   <div class="settings-backdrop" id="closeBackdrop" hidden>
     <section class="settings-dialog social-dialog choice-dialog" role="dialog" aria-modal="true" aria-labelledby="closeDialogTitle">
       <div class="dialog-header">
-        <h2 id="closeDialogTitle">Close Esteria Launcher?</h2>
+        <h2 id="closeDialogTitle">Close WHE Launcher?</h2>
       </div>
       <div class="dialog-body">
         <p class="choice-copy">Choose what the launcher should do. You can change this later in Game settings.</p>
@@ -785,7 +781,7 @@
   <div class="settings-backdrop" id="playBackdrop" hidden>
     <section class="settings-dialog social-dialog choice-dialog" role="dialog" aria-modal="true" aria-labelledby="playDialogTitle">
       <div class="dialog-header">
-        <h2 id="playDialogTitle">Starting Esteria</h2>
+        <h2 id="playDialogTitle">Starting WHE</h2>
       </div>
       <div class="dialog-body">
         <p class="choice-copy">What should the launcher do while the game is running?</p>
@@ -807,5 +803,6 @@
   <script src="./game.js"></script>
     <script src="./stats.js"></script>
     <script src="./pages.js"></script>
+    <script src="./whe.js"></script>
 </body>
 </html>

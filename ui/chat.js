@@ -95,7 +95,7 @@ function absUrl(url) {
 
 async function api(path, { method = 'GET', body } = {}) {
   const base = apiBase();
-  if (!base) throw new Error('The Esteria account API address is not set.');
+  if (!base) throw new Error('The WHE account API address is not set.');
   const response = await fetch(`${base}${path}`, {
     method,
     cache: 'no-store',
@@ -487,7 +487,7 @@ async function boot() {
   await startOnce();
   if (!state.account) {
     $('#emptyState').hidden = false;
-    $('#emptyState').textContent = 'Sign in to your Esteria account in the launcher to chat.';
+    $('#emptyState').textContent = 'Sign in to your WHE account in the launcher to chat.';
     return;
   }
   $('#emptyState').hidden = true;

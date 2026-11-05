@@ -169,5 +169,5 @@ if (-not [string]::IsNullOrWhiteSpace($BaseUrl)) { $manifest.baseUrl = $BaseUrl.
 [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($outputFull)) | Out-Null
 # Write the manifest last; a failed build must never advertise an incomplete release.
 [IO.File]::WriteAllText($outputFull, ($manifest | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
-Write-Host "Esteria manifest written to: $outputFull"
+Write-Host "WHE manifest written to: $outputFull"
 Write-Host "Files: $($entries.Count); ZIP bundles: $($bundles.Count)"
