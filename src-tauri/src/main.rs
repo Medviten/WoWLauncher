@@ -45,7 +45,8 @@ const LEGACY_DATABASE_URL: &str = "";
 const DEFAULT_ACCOUNT_API: &str = "";
 const DEFAULT_GAME_API: &str = "";
 const DEFAULT_REALM_HOST: &str = "100.110.63.66";
-const DEFAULT_REALM_NAME: &str = "256-bit";
+/// The stable realm, usually online. Tagged patches (patch-A.<realm>.MPQ) follow this name.
+const DEFAULT_REALM_NAME: &str = "War";
 const DEFAULT_REALM_PORT: u16 = 3724;
 const DOWNLOAD_STALL_SECS: u64 = 60;
 const PARALLEL_FILE_LIMIT: u64 = 64 * 1024 * 1024;
@@ -122,7 +123,7 @@ struct LauncherSettings {
 impl Default for LauncherSettings {
     fn default() -> Self {
         Self {
-            settings_version: 7,
+            settings_version: 8,
             game_path: String::new(),
             channel: default_channel(),
             manifest_source: default_manifest_source(),
@@ -703,6 +704,14 @@ fn load_settings_from_disk() -> LauncherSettings {
             settings.database_source = default_database_source();
         }
         settings.settings_version = 7;
+        let _ = save_settings_to_disk(&settings);
+    }
+    if settings.settings_version < 8 {
+        // The first WHE builds named a realm that does not exist.
+        if settings.realm_name == "256-bit" {
+            settings.realm_name = default_realm_name();
+        }
+        settings.settings_version = 8;
         let _ = save_settings_to_disk(&settings);
     }
     if settings.discord_client_id.trim().is_empty() {
@@ -1832,7 +1841,7 @@ fn get_settings() -> LauncherSettings {
 
 #[tauri::command]
 fn save_settings(mut settings: LauncherSettings) -> Result<LauncherSettings, String> {
-    settings.settings_version = 7;
+    settings.settings_version = 8;
     settings.channel = settings.channel.trim().to_ascii_lowercase();
     if settings.channel != "live" && settings.channel != "ptr" {
         return Err("Game channel must be either live or ptr.".to_string());

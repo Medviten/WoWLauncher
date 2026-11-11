@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS = {
   autoUpdateAddons: true,
   realmHost: '100.110.63.66',
   realmPort: 3724,
-  realmName: '256-bit',
+  realmName: 'War',
   autoLogin: false,
   setupComplete: false,
   patchList: '100.110.63.66',
