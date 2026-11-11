@@ -298,6 +298,10 @@ struct PatchFile {
     size: Option<u64>,
     #[serde(default)]
     url: Option<String>,
+    /// Only downloaded when nothing exists at this path; an existing copy is kept unchecked. Used for the stock
+    /// MPQs, which testers' own clients may hold in a different but equally valid form.
+    #[serde(default)]
+    if_missing: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1169,6 +1173,9 @@ async fn file_matches(
     if !destination.is_file() {
         return Ok(false);
     }
+    if file.if_missing {
+        return Ok(true);
+    }
     if let Some(expected_size) = file.size {
         let actual_size = tokio::fs::metadata(&destination)
             .await
@@ -1979,6 +1986,9 @@ async fn verify_installation(
                 kind: "missing".to_string(),
                 detail: "File is missing.".to_string(),
             });
+            continue;
+        }
+        if file.if_missing {
             continue;
         }
 
@@ -3145,6 +3155,28 @@ mod tests {
         fs::write(root.join("Data/Other/Mine.txt"), b"x").unwrap();
         let manifest = prune_manifest(&["Data/patch-A.MPQ"], &["data/PATCH-A.mpq/sub/kept.BLP"]);
         assert_eq!(stale_files(root, &manifest).unwrap(), vec!["Data/patch-A.MPQ/Sub/Old.blp".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn if_missing_files_are_kept_when_present() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join("Data")).unwrap();
+        fs::write(root.join("Data/patch-3.MPQ"), b"their own stock archive").unwrap();
+        let manifest: PatchManifest = serde_json::from_value(serde_json::json!({
+            "version": "1",
+            "files": [
+                { "path": "Data/patch-3.MPQ", "sha256": "00", "size": 1, "ifMissing": true },
+                { "path": "Data/patch-2.MPQ", "sha256": "00", "ifMissing": true },
+                { "path": "Data/patch-4.MPQ", "sha256": "00" }
+            ]
+        }))
+        .unwrap();
+        fs::write(root.join("Data/patch-4.MPQ"), b"x").unwrap();
+        let mut cache = HashMap::new();
+        assert!(file_matches(root, &manifest.files[0], &mut cache).await.unwrap());
+        assert!(!file_matches(root, &manifest.files[1], &mut cache).await.unwrap());
+        assert!(!file_matches(root, &manifest.files[2], &mut cache).await.unwrap());
     }
 
     #[test]

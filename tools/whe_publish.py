@@ -174,13 +174,22 @@ def wsl_path(path):
     return f"/mnt/{drive[0].lower()}{rest.replace(chr(92), '/')}"
 
 
+# Runs a command in WSL. Uses the ssh-agent at ~/.ssh/agent.sock when the caller has none, so a key with a
+# passphrase works without prompts (start it with: eval "$(ssh-agent -a ~/.ssh/agent.sock -t 8h)"; ssh-add).
+WSL_PREFIX = [
+    "wsl", "-e", "sh", "-c",
+    'S=$HOME/.ssh/agent.sock; [ -z "$SSH_AUTH_SOCK" ] && [ -S "$S" ] && export SSH_AUTH_SOCK=$S; exec "$@"',
+    "sh",
+]
+
+
 def run(command):
     print("  $ " + " ".join(command))
-    subprocess.run(command, check=True)
+    subprocess.run(WSL_PREFIX + command, check=True)
 
 
 def rsync(*arguments):
-    run(["wsl", "rsync", "-rt", "--chmod=D755,F644", "--info=stats1", *arguments])
+    run(["rsync", "-rt", "--chmod=D755,F644", "--info=stats1", *arguments])
 
 
 def upload(config, client, stage, loose_files, extras_dir):
@@ -189,7 +198,7 @@ def upload(config, client, stage, loose_files, extras_dir):
     live = f"{root}/client/{config.get('channel', 'live')}"
     remote_live = f"{remote_host}:{live}/"
 
-    run(["wsl", "ssh", remote_host, "mkdir", "-p", f"{live}/.bundles", f"{root}/addons", f"{root}/launcher-updates"])
+    run(["ssh", remote_host, "mkdir", "-p", f"{live}/.bundles", f"{root}/addons", f"{root}/launcher-updates"])
     # Placeholders for files that are edited by hand on the server, so they are never overwritten.
     rsync("--ignore-existing", f"{wsl_path(stage / 'site')}/", f"{remote_host}:{root}/")
 
@@ -266,9 +275,12 @@ def main():
         shutil.copy2(source, destination)
 
     files = []
+    if_missing = config.get("ifMissing", [])
     for relative in sorted(entries):
         entry = dict(entries[relative])
         entry["url"] = urllib.parse.quote(relative)
+        if matches(relative, if_missing):
+            entry["ifMissing"] = True
         files.append(entry)
     write_json(stage / "manifest.json", {
         "schemaVersion": 2,

@@ -37,7 +37,12 @@ nginx listens only on the Tailscale address. `tailscale status` on the server sh
 
 ## 3. Publish the client
 
-On your PC (Python, and WSL with `rsync` and your SSH key):
+On your PC (Python, and WSL with `rsync` and your SSH key). If the key has a passphrase, unlock it once in a WSL
+window and keep that window open; the script uses this agent without prompting:
+
+```bash
+rm -f ~/.ssh/agent.sock; eval "$(ssh-agent -a ~/.ssh/agent.sock -t 8h)"; ssh-add
+```
 
 ```powershell
 python tools/whe_publish.py --dry-run   # what would ship
@@ -48,6 +53,7 @@ python tools/whe_publish.py             # build and upload
 
 - `exclude` leaves out `Data/Retail/Cache`, which the client writes to and downloads from Blizzard's CDN when needed.
 - `loose` keeps `DBFilesClient` as individual files, so DBC changes stay small downloads.
+- `ifMissing` marks the stock MPQs. They are downloaded only when a tester has no file of that name, so a tester's own 3.3.5 client keeps its standard archives instead of getting the squished ones. A half-installed standard client (some stock MPQs missing) is not repaired by this; point the launcher at an empty folder instead.
 - `prune` lists folders the launcher owns. Files there that leave the manifest are **deleted** from testers' clients, so stale overrides cannot linger. Only folders under `Data/` are accepted.
 - Old loose files stay on the server until you delete them. They do nothing, because only the manifest counts.
 
@@ -89,3 +95,4 @@ If the download is very slow, have them run `tailscale ping gai1gai1`. "via DERP
 - Saved logins are encrypted with Windows DPAPI (`src-tauri/src/login.rs`) and passed to the client as `-login`/`-password`. Other programs running on that PC can read a process's command line, so don't reuse an important password.
 - Community, friends, armory, database, stats and the account page are hidden by `ui/whe.css`, because they need Esteria's closed-source social service or `mod-launcher-api`. Their code is still there, which keeps upstream merges simple.
 - Manifests gain a `prune` list (`stale_files` in `main.rs`).
+- Manifest files can carry `ifMissing`: present files are kept without a hash check (`file_matches` in `main.rs`).

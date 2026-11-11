@@ -20,3 +20,4 @@ native/build/
 native/helper/bin/
 native/helper/obj/
 dist/
+__pycache__/

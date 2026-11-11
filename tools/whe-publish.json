@@ -16,5 +16,9 @@
   "loose": ["Data/patch-A.MPQ/DBFilesClient", "Data/patch-B.MPQ/DBFilesClient"],
   "bundleMaxMB": 150,
   "bundleMinFiles": 16,
+  "ifMissing": [
+    "Data/common.MPQ", "Data/common-2.MPQ", "Data/expansion.MPQ", "Data/lichking.MPQ",
+    "Data/patch.MPQ", "Data/patch-2.MPQ", "Data/patch-3.MPQ", "Data/enUS/*.MPQ"
+  ],
   "prune": ["Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/DBFilesClient"]
 }
