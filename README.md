@@ -58,7 +58,7 @@ Built with **Tauri 2** (Rust), plain HTML/CSS/JavaScript, and a small **AzerothC
 ### Home
 
 - **Play / Install / Update:** the big button changes with your install state. *Install* downloads the whole client into an empty folder, *Update* repairs or updates an existing one, *Play* appears when every managed file is verified.
-- **Channel and realm:** pick Live or PTR under *Game version*. The sidebar shows whether the realm is online and which build is live.
+- **Channel and realm:** pick Live or PTR under *Game version*, and the realm under *Realm* when the server lists realms. The sidebar shows whether the realm is online and which build is live. A realm change takes effect the next time the game starts.
 - **Update marquee:** the banner at the top cycles through the newest stories. **Read story** opens the story inside the launcher.
 - **Latest from Esteria:** the newest three stories as cards; click one to read it. **View all** opens the News tab with every story.
 - **Development feed:** the newest patch-note entries. Click one to jump to it on the Patch Notes page.
@@ -443,11 +443,16 @@ The CDN generates this automatically; hand-authored manifests also work for test
   "version": "2026.10.07.1",
   "files": [
     { "path": "Wow.exe", "sha256": "<64-character SHA-256>", "size": 12345678, "url": "/client/live/Wow.exe" }
+  ],
+  "realms": [
+    { "name": "War", "description": "The stable realm" }
   ]
 }
 ```
 
 Parent traversal and absolute client paths are rejected.
+
+`realms` is optional. When it lists any, the Home page shows a *Realm* dropdown with them plus *Choose in game*. The choice is saved as the realm name, which Play writes into `Config.wtf` and passes to auto-login, and the client loads that realm's tagged patches (`patch-<name>.<realm>.MPQ`). `whe_publish.py` copies the list from `realms` in `whe-publish.json`.
 
 ### Add-on catalog format
 

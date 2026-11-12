@@ -180,6 +180,7 @@ button { color: inherit; }
   color: #c7cdd4;
   outline: 0;
 }
+.realm-picker { margin-top: 12px; }
 .play-row { display: grid; grid-template-columns: 1fr 42px; gap: 0; margin-top: 10px; }
 .play-button, .settings-button {
   height: 54px;

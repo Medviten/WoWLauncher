@@ -285,6 +285,18 @@ struct PatchManifest {
     /// Folders under Data/ the manifest fully owns; anything else in them is deleted on repair.
     #[serde(default)]
     prune: Vec<String>,
+    /// Realms players can pick on the Home page; Play writes the choice into realmName, which also picks
+    /// the realm-tagged patches (patch-A.<realm>.MPQ) the client loads.
+    #[serde(default)]
+    realms: Vec<ManifestRealm>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ManifestRealm {
+    name: String,
+    #[serde(default)]
+    description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2562,6 +2574,23 @@ async fn remove_addon(
     })
 }
 
+/// The realms the channel's manifest offers, for the Home page's realm dropdown. Empty when no manifest is set
+/// or it lists none; the realm name in Settings still works then.
+#[tauri::command]
+async fn fetch_realms(settings: LauncherSettings) -> Result<Vec<ManifestRealm>, String> {
+    if settings.manifest_source.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+    let (manifest, _) = load_manifest(&settings.manifest_source).await?;
+    let mut seen = std::collections::HashSet::new();
+    Ok(manifest
+        .realms
+        .into_iter()
+        .map(|realm| ManifestRealm { name: realm.name.trim().to_string(), ..realm })
+        .filter(|realm| !realm.name.is_empty() && seen.insert(realm.name.clone()))
+        .collect())
+}
+
 #[tauri::command]
 async fn check_realm(settings: LauncherSettings) -> RealmStatus {
     let host = settings.realm_host.trim().to_string();
@@ -3171,6 +3200,7 @@ fn main() {
             update_managed_addons,
             remove_addon,
             check_realm,
+            fetch_realms,
             fetch_news,
             fetch_server_status,
             fetch_social_snapshot,
@@ -3216,6 +3246,19 @@ mod tests {
     fn prune_manifest(prune: &[&str], files: &[&str]) -> PatchManifest {
         let files: Vec<_> = files.iter().map(|path| serde_json::json!({ "path": path, "sha256": "00" })).collect();
         serde_json::from_value(serde_json::json!({ "version": "1", "files": files, "prune": prune })).unwrap()
+    }
+
+    #[test]
+    fn manifest_realms_are_optional() {
+        assert!(prune_manifest(&[], &[]).realms.is_empty());
+        let manifest: PatchManifest = serde_json::from_value(serde_json::json!({
+            "version": "1",
+            "files": [],
+            "realms": [{ "name": "War" }, { "name": "Test", "description": "PTR realm" }]
+        }))
+        .unwrap();
+        assert_eq!(manifest.realms.len(), 2);
+        assert_eq!(manifest.realms[1].description.as_deref(), Some("PTR realm"));
     }
 
     #[test]

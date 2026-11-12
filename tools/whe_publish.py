@@ -289,6 +289,8 @@ def main():
         "files": files,
         "bundles": bundles,
         "prune": config.get("prune", []),
+        # Realms for the launcher's realm dropdown: [{"name": "War", "description": "..."}].
+        "realms": config.get("realms", []),
     })
 
     site = stage / "site"

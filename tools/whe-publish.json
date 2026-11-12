@@ -4,6 +4,7 @@
   "sshHost": "medviten@100.110.63.66",
   "remoteRoot": "/srv/wow-cdn",
   "channel": "live",
+  "realms": [{ "name": "War", "description": "The stable realm" }],
   "files": ["WowClient64.exe", "XvidDecoder.dll", "OpenAL64.dll", "Data/*.mpq", "Data/*.MPQ"],
   "folders": ["Data/enUS", "Data/DBFilesClient", "Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/Retail", "Interface", "Data/patch-A.war.MPQ"],
   "exclude": ["Data/Retail/Cache/*", "*.log", "*.pdb", "*.zip", "Thumbs.db", "desktop.ini", ".git*"],

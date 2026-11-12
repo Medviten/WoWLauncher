@@ -41,6 +41,7 @@ const appState = {
   addons: [],
   runtimeInfo: null,
   serverStatus: null,
+  realms: [],
   launcherUpdate: null,
   launcherUpdating: false,
   featuredNewsUrl: '',
@@ -749,6 +750,60 @@ async function refreshServerStatus() {
     console.warn('Could not load server status', error);
   }
 }
+
+// Realms come from the channel's manifest. The pick is saved as realmName, which Play writes into
+// Config.wtf and passes to auto-login; the client also loads that realm's tagged patches (patch-X.<realm>.MPQ).
+async function refreshRealms() {
+  const picker = $('#realmPicker');
+  const select = $('#realmSelect');
+  let realms = [];
+  if (desktopAvailable()) {
+    try {
+      realms = (await invokeTauri('fetch_realms', { settings: appState.settings })) || [];
+    } catch (error) {
+      console.warn('Could not load the realm list', error);
+    }
+  }
+  appState.realms = realms;
+  const current = (appState.settings.realmName || '').trim();
+  const names = realms.map((realm) => realm.name);
+  if (current && !names.some((name) => name.toLowerCase() === current.toLowerCase())) {
+    realms = [...realms, { name: current, description: 'Set in Settings' }];
+  }
+  picker.hidden = names.length === 0;
+  // An empty realmName makes the client open on its realm list.
+  const options = [...realms, { name: '', label: 'Choose in game', description: 'Pick the realm from the in-game realm list' }];
+  select.replaceChildren(...options.map((realm) => {
+    const option = document.createElement('option');
+    option.value = realm.name;
+    option.textContent = realm.label || realm.name;
+    if (realm.description) option.title = realm.description;
+    return option;
+  }));
+  const match = options.find((realm) => realm.name.toLowerCase() === current.toLowerCase());
+  select.value = match ? match.name : '';
+}
+
+$('#realmSelect').addEventListener('change', async () => {
+  const select = $('#realmSelect');
+  const nextName = select.value;
+  if (nextName === appState.settings.realmName) return;
+  const previousSettings = appState.settings;
+  const nextSettings = { ...appState.settings, realmName: nextName };
+  try {
+    const saved = await invokeTauri('save_settings', { settings: nextSettings });
+    appState.settings = saved || nextSettings;
+    $('#realmNameInput').value = appState.settings.realmName || '';
+    const label = nextName || 'the in-game realm list';
+    showToast(appState.gameRunning
+      ? `Realm set to ${label}. Restart the game to load its patches.`
+      : `Realm set to ${label}.`);
+  } catch (error) {
+    appState.settings = previousSettings;
+    select.value = previousSettings.realmName || '';
+    showToast(String(error), 5200);
+  }
+});
 
 async function checkLauncherUpdate({ silent = false } = {}) {
   if (!desktopAvailable() || appState.launcherUpdating) return null;
@@ -1976,7 +2031,7 @@ versionSelect.addEventListener('change', async () => {
     const saved = await invokeTauri('save_settings', { settings: nextSettings });
     if (saved) appState.settings = saved;
     await verifyInstallation({ silent: true });
-    await refreshServerStatus();
+    await Promise.all([refreshServerStatus(), refreshRealms()]);
     showToast(`Switched to WHE ${nextChannel === 'ptr' ? 'PTR' : 'Live'}.`);
   } catch (error) {
     appState.settings = previousSettings;
@@ -2034,7 +2089,7 @@ $('#saveSettingsButton').addEventListener('click', async () => {
     closeSettings();
     setUpdateStatus(appState.settings.gamePath ? 'Checking install…' : 'Select install location');
     updatePlayState();
-    await Promise.all([refreshRealmStatus(), refreshServerStatus(), refreshNews(), refreshSocialSnapshot()]);
+    await Promise.all([refreshRealmStatus(), refreshServerStatus(), refreshRealms(), refreshNews(), refreshSocialSnapshot()]);
     await verifyInstallation({ silent: true });
     if (appState.settings.autoUpdateAddons) await autoUpdateManagedAddons({ silent: true });
     if (appState.showingAddons) await refreshAddons();
@@ -2913,6 +2968,7 @@ async function initializeDesktopState() {
     await Promise.all([
       refreshGamePresence(),
       refreshRealmStatus(),
+      refreshRealms(),
       refreshServerStatus(),
       refreshSocialSnapshot(),
       refreshNews(),
