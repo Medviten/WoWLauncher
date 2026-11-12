@@ -5,20 +5,20 @@
   "remoteRoot": "/srv/wow-cdn",
   "channel": "live",
   "files": ["WowClient64.exe", "XvidDecoder.dll", "OpenAL64.dll", "Data/*.mpq", "Data/*.MPQ"],
-  "folders": ["Data/enUS", "Data/DBFilesClient", "Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/Retail", "Interface"],
+  "folders": ["Data/enUS", "Data/DBFilesClient", "Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/Retail", "Interface", "Data/patch-A.war.MPQ"],
   "exclude": ["Data/Retail/Cache/*", "*.log", "*.pdb", "*.zip", "Thumbs.db", "desktop.ini", ".git*"],
   "extras": {
     "msvcp140.dll": "C:/Windows/System32/msvcp140.dll",
     "vcruntime140.dll": "C:/Windows/System32/vcruntime140.dll",
     "vcruntime140_1.dll": "C:/Windows/System32/vcruntime140_1.dll"
   },
-  "bundleRoots": ["Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/Retail/Pack", "Data/enUS", "Interface"],
-  "loose": ["Data/patch-A.MPQ/DBFilesClient", "Data/patch-B.MPQ/DBFilesClient"],
+  "bundleRoots": ["Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/Retail/Pack", "Data/enUS", "Interface", "Data/patch-A.war.MPQ"],
+  "loose": ["Data/patch-A.MPQ/DBFilesClient", "Data/patch-B.MPQ/DBFilesClient", "Data/patch-A.war.MPQ/DBFilesClient"],
   "bundleMaxMB": 150,
   "bundleMinFiles": 16,
   "ifMissing": [
     "Data/common.MPQ", "Data/common-2.MPQ", "Data/expansion.MPQ", "Data/lichking.MPQ",
     "Data/patch.MPQ", "Data/patch-2.MPQ", "Data/patch-3.MPQ", "Data/enUS/*.MPQ"
   ],
-  "prune": ["Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/DBFilesClient"]
+  "prune": ["Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/DBFilesClient", "Data/patch-A.war.MPQ"]
 }

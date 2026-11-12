@@ -1,5 +1,6 @@
 //! Optional saved game login. Encrypted with Windows DPAPI, so only the same Windows user on the same
 //! PC can read it. The client takes it through its -login and -password switches.
+//! On Linux it is stored as is, in a file only the user can read: SteamOS's game mode has no keyring to use.
 
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
@@ -49,7 +50,24 @@ pub fn save_game_login(account: String, password: String) -> Result<(), String> 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| format!("Could not create the settings folder: {error}"))?;
     }
-    fs::write(path, encrypted).map_err(|error| format!("Could not save the login: {error}"))
+    write_private(&path, &encrypted).map_err(|error| format!("Could not save the login: {error}"))
+}
+
+#[cfg(windows)]
+fn write_private(path: &std::path::Path, data: &[u8]) -> std::io::Result<()> {
+    fs::write(path, data)
+}
+
+#[cfg(not(windows))]
+fn write_private(path: &std::path::Path, data: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+    // The mode only applies to a new file, so an older one is replaced rather than rewritten.
+    match fs::remove_file(path) {
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(error),
+        _ => {}
+    }
+    fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(path)?.write_all(data)
 }
 
 #[tauri::command]
@@ -106,12 +124,12 @@ mod dpapi {
 
 #[cfg(not(windows))]
 mod dpapi {
-    pub fn protect(_data: &[u8]) -> Result<Vec<u8>, String> {
-        Err("Saved logins need Windows.".to_string())
+    pub fn protect(data: &[u8]) -> Result<Vec<u8>, String> {
+        Ok(data.to_vec())
     }
 
-    pub fn unprotect(_data: &[u8]) -> Result<Vec<u8>, String> {
-        Err("Saved logins need Windows.".to_string())
+    pub fn unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
+        Ok(data.to_vec())
     }
 }
 

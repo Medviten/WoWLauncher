@@ -77,12 +77,42 @@ powershell -File tools/Publish-EsteriaLauncher.ps1 -BundleRoot 'D:\wow-scratch\l
 wsl rsync -rt --chmod=D755,F644 /mnt/d/wow-scratch/whe-cdn/launcher-updates/ medviten@100.110.63.66:/srv/wow-cdn/launcher-updates/
 ```
 
+### Linux build (Steam Deck and desktop Linux)
+
+The Linux launcher is an AppImage and must be built on Linux, here in WSL (Ubuntu). Once:
+
+```sh
+sudo apt install build-essential curl wget file rsync nodejs npm libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+curl --proto '=https' -sSf https://sh.rustup.rs | sh
+```
+
+Each release, from the same commit as the Windows build:
+
+```sh
+rsync -a --delete --exclude node_modules --exclude src-tauri/target /mnt/d/GitHub/WoWLauncher/ ~/whe-launcher/
+cd ~/whe-launcher && npm ci
+export TAURI_SIGNING_PRIVATE_KEY="$(cat /mnt/c/Users/Medviten/.tauri/whe.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD=''
+APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1 npx tauri build
+mkdir -p /mnt/d/wow-scratch/launcher-linux && cp src-tauri/target/release/bundle/appimage/*.AppImage* /mnt/d/wow-scratch/launcher-linux/
+```
+
+The build happens in the WSL home folder because `node_modules` on D: holds the Windows build tools. `APPIMAGE_EXTRACT_AND_RUN` stands in for FUSE, which WSL lacks; `NO_STRIP` works around linuxdeploy's `strip` failing on newer libraries. Then publish both platforms together by adding `-LinuxBundleRoot 'D:\wow-scratch\launcher-linux'` to the publish command above. Publishing without it leaves Linux launchers on their current version.
+
+On Linux, Play runs the client through Wine or Proton: the **Wine or Proton** setting, or else `wine` from PATH, or else the newest Proton in the Steam library. Proton gets its own prefix in `~/.config/WHELauncher/proton-prefix`. The saved login is a plain file there, readable only by the user (SteamOS's game mode has no keyring).
+
 ## 5. Add a tester
 
 1. Share `gai1gai1` with them in Tailscale, and have them install and sign in to Tailscale.
 2. Create their game account on the server.
 3. Send them `http://100.110.63.66:7384/launcher-updates/WHE%20Launcher_<version>_x64-setup.exe`. Windows SmartScreen warns about it because it is unsigned: **More info**, then **Run anyway**.
 4. They open the launcher, choose a folder, enter their account, and wait for the download. After that it is just Play.
+
+On a **Steam Deck**, in desktop mode:
+
+1. Install Tailscale (SteamOS has no package for it; the usual route is the community `deck-tailscale` script) and sign in.
+2. Make sure Steam has a Proton installed: any Windows game played before will have done it; otherwise install **Proton Experimental** from the Steam library.
+3. Download `WHE Launcher_<version>_amd64.AppImage` from the same folder, then in Dolphin: right click, **Properties**, **Permissions**, tick **Is executable**. Open it and continue as above; `~/Games/WHE` is the suggested folder.
+4. For game mode: Steam, **Add a Non-Steam Game**, pick the AppImage. Do not set a compatibility tool for it: the launcher is a Linux program and starts Proton by itself. The 3.3.5 client has no controller support, so pick a keyboard and mouse controller layout.
 
 The first game launch shows the EULA and Terms of Service once. After they accept, auto-login continues.
 

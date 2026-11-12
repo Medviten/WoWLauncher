@@ -3,6 +3,9 @@ param(
     [string]$UpdatesRoot,
 
     [string]$BundleRoot = '',
+    # Folder holding the Linux build's .AppImage and .AppImage.sig (bundle/appimage). Leave it out and Linux
+    # launchers are not offered this update.
+    [string]$LinuxBundleRoot = '',
     [string]$BaseUrl = 'http://100.110.63.66:7384/launcher-updates/',
     [string]$Version = '',
     [string]$Notes = 'WHE Launcher update'
@@ -51,6 +54,29 @@ $latest = [ordered]@{
             signature = $signature
             url = $base + [uri]::EscapeDataString($installer.Name)
         }
+    }
+}
+
+if (-not [string]::IsNullOrWhiteSpace($LinuxBundleRoot)) {
+    $appImage = Get-ChildItem -LiteralPath $LinuxBundleRoot -Filter '*.AppImage' -File |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    if (-not $appImage) {
+        throw "No AppImage was found in $LinuxBundleRoot"
+    }
+    if ($appImage.Name -notlike "*_$($Version.TrimStart('v'))_*") {
+        throw "$($appImage.Name) is not version $Version. Build Windows and Linux from the same commit."
+    }
+    $appImageSig = "$($appImage.FullName).sig"
+    if (-not (Test-Path -LiteralPath $appImageSig -PathType Leaf)) {
+        throw "Signed updater artifact is missing: $appImageSig. Build with TAURI_SIGNING_PRIVATE_KEY set."
+    }
+    $destinationAppImage = Join-Path $UpdatesRoot $appImage.Name
+    Copy-Item -LiteralPath $appImage.FullName -Destination $destinationAppImage -Force
+    Copy-Item -LiteralPath $appImageSig -Destination "$destinationAppImage.sig" -Force
+    $latest.platforms['linux-x86_64'] = [ordered]@{
+        signature = (Get-Content -LiteralPath $appImageSig -Raw).Trim()
+        url = $base + [uri]::EscapeDataString($appImage.Name)
     }
 }
 

@@ -8,6 +8,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+#[cfg(windows)]
 use std::process::Command;
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
@@ -24,6 +25,8 @@ use tokio::time::timeout;
 use url::Url;
 
 mod extras;
+#[cfg(not(windows))]
+mod linux;
 mod login;
 mod torrent;
 
@@ -118,6 +121,9 @@ struct LauncherSettings {
     /// "ask", "minimize", "tray", or "keep" — what to do with the launcher when the game starts.
     #[serde(default = "default_play_action")]
     play_action: String,
+    /// Linux only: what runs the Windows client. Empty picks wine from PATH, or else Steam's Proton.
+    #[serde(default)]
+    wine_command: String,
 }
 
 impl Default for LauncherSettings {
@@ -151,6 +157,7 @@ impl Default for LauncherSettings {
             minimize_on_play: true,
             close_action: default_close_action(),
             play_action: default_play_action(),
+            wine_command: String::new(),
         }
     }
 }
@@ -601,10 +608,17 @@ struct AddonActionResult {
 }
 
 fn app_data_dir() -> Result<PathBuf, String> {
+    #[cfg(windows)]
     let base = env::var_os("APPDATA")
         .or_else(|| env::var_os("LOCALAPPDATA"))
+        .map(PathBuf::from)
         .ok_or_else(|| "Windows application data directory could not be located.".to_string())?;
-    Ok(PathBuf::from(base).join(SETTINGS_DIR))
+    #[cfg(not(windows))]
+    let base = env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".config")))
+        .ok_or_else(|| "The home folder could not be located.".to_string())?;
+    Ok(base.join(SETTINGS_DIR))
 }
 
 fn settings_path() -> Result<PathBuf, String> {
@@ -830,7 +844,7 @@ fn likely_game_candidates() -> Vec<PathBuf> {
         }
     }
 
-    if let Some(user_profile) = env::var_os("USERPROFILE") {
+    if let Some(user_profile) = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME")) {
         let user = PathBuf::from(user_profile);
         candidates.insert(user.join("Games").join("WHE"));
         candidates.insert(user.join("Desktop").join("WHE"));
@@ -1817,21 +1831,20 @@ fn update_config_wtf(settings: &LauncherSettings) -> Result<(), String> {
 
 #[tauri::command]
 fn is_game_running() -> bool {
-    if !cfg!(target_os = "windows") {
-        return false;
-    }
-    let mut command = Command::new("tasklist");
+    #[cfg(not(windows))]
+    return linux::is_game_running();
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
+        let mut command = Command::new("tasklist");
         command.creation_flags(0x08000000); // Keep the periodic presence check from opening a console.
+        command
+            .args(["/FI", "IMAGENAME eq WowClient64.exe", "/FO", "CSV", "/NH"])
+            .output()
+            .ok()
+            .map(|output| String::from_utf8_lossy(&output.stdout).to_ascii_lowercase().contains("wowclient64.exe"))
+            .unwrap_or(false)
     }
-    command
-        .args(["/FI", "IMAGENAME eq WowClient64.exe", "/FO", "CSV", "/NH"])
-        .output()
-        .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).to_ascii_lowercase().contains("wowclient64.exe"))
-        .unwrap_or(false)
 }
 
 #[tauri::command]
@@ -1861,7 +1874,7 @@ fn save_settings(mut settings: LauncherSettings) -> Result<LauncherSettings, Str
 
 #[tauri::command]
 fn default_install_path() -> Option<String> {
-    let profile = env::var_os("USERPROFILE")?;
+    let profile = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME"))?;
     Some(PathBuf::from(profile).join("Games").join("WHE").to_string_lossy().to_string())
 }
 
@@ -1910,7 +1923,10 @@ fn launch_game(app: tauri::AppHandle, settings: LauncherSettings) -> Result<(), 
     }
     clear_cache_before_launch(&root, settings.clear_cache)?;
 
+    #[cfg(windows)]
     let mut command = Command::new(&executable);
+    #[cfg(not(windows))]
+    let mut command = linux::game_command(&executable, &settings.wine_command)?;
     command.current_dir(&root);
     if settings.auto_login {
         if let Some(saved) = login::load() {
@@ -2172,6 +2188,47 @@ async fn install_patch_file(
     Ok((downloaded_size, destination))
 }
 
+/// Renames files that sit where the manifest needs a folder, such as another server's `Data/Patch-A.MPQ` archive
+/// where this build ships a `Data/patch-A.MPQ/` folder. They get a `.replaced` suffix, which the client ignores, so
+/// they can be restored by hand. Returns the renamed paths.
+fn move_files_blocking_folders(root: &Path, manifest: &PatchManifest) -> Result<Vec<PathBuf>, String> {
+    let mut folders = BTreeSet::new();
+    let paths = manifest
+        .files
+        .iter()
+        .map(|file| (file.path.as_str(), false))
+        .chain(manifest.bundles.iter().map(|bundle| (bundle.path.as_str(), true)));
+    for (path, is_folder) in paths {
+        let relative = validate_relative_path(path)?;
+        let mut current = PathBuf::new();
+        let components: Vec<_> = relative.components().collect();
+        let folder_count = if is_folder { components.len() } else { components.len().saturating_sub(1) };
+        for component in components.into_iter().take(folder_count) {
+            current.push(component);
+            folders.insert(current.clone());
+        }
+    }
+
+    let mut moved = Vec::new();
+    for folder in folders {
+        let target = root.join(&folder);
+        if !target.is_file() {
+            continue;
+        }
+        let mut renamed = PathBuf::from(format!("{}.replaced", target.display()));
+        let mut counter = 2;
+        while renamed.exists() {
+            renamed = PathBuf::from(format!("{}.replaced{counter}", target.display()));
+            counter += 1;
+        }
+        fs::rename(&target, &renamed).map_err(|error| {
+            format!("{} is a file where the client needs a folder, and it could not be renamed: {error}", target.display())
+        })?;
+        moved.push(renamed);
+    }
+    Ok(moved)
+}
+
 #[tauri::command]
 async fn repair_installation(
     app: tauri::AppHandle,
@@ -2183,6 +2240,7 @@ async fn repair_installation(
     let total = manifest.files.len();
     let mut cache = load_hash_cache();
     let mut repair_indexes = Vec::new();
+    move_files_blocking_folders(&root, &manifest)?;
     let stale = stale_files(&root, &manifest)?;
     for path in &stale {
         tokio::fs::remove_file(root.join(validate_relative_path(path)?))
@@ -2801,7 +2859,11 @@ fn open_client_subfolder(settings: LauncherSettings, folder: String) -> Result<(
     let root = game_root_from_settings(&settings, true)?;
     let target = root.join(folder.trim());
     fs::create_dir_all(&target).map_err(|error| format!("Could not create {}: {error}", target.display()))?;
-    Command::new("explorer").arg(&target).spawn().map_err(|error| format!("Could not open {}: {error}", target.display()))?;
+    #[cfg(windows)]
+    let opened = Command::new("explorer").arg(&target).spawn();
+    #[cfg(not(windows))]
+    let opened = linux::xdg_open(target.as_os_str());
+    opened.map_err(|error| format!("Could not open {}: {error}", target.display()))?;
     Ok(())
 }
 
@@ -2836,10 +2898,11 @@ fn open_install_directory(settings: LauncherSettings) -> Result<(), String> {
     if !root.exists() {
         return Err("The selected WHE install folder does not exist yet.".to_string());
     }
-    Command::new("explorer")
-        .arg(&root)
-        .spawn()
-        .map_err(|error| format!("Could not open {}: {error}", root.display()))?;
+    #[cfg(windows)]
+    let opened = Command::new("explorer").arg(&root).spawn();
+    #[cfg(not(windows))]
+    let opened = linux::xdg_open(root.as_os_str());
+    opened.map_err(|error| format!("Could not open {}: {error}", root.display()))?;
     Ok(())
 }
 
@@ -2862,11 +2925,11 @@ fn open_external_url(url: String) -> Result<(), String> {
     if parsed.scheme() != "http" && parsed.scheme() != "https" {
         return Err("Only http:// and https:// links can be opened.".to_string());
     }
-    Command::new("rundll32")
-        .arg("url.dll,FileProtocolHandler")
-        .arg(parsed.as_str())
-        .spawn()
-        .map_err(|error| format!("Could not open the link: {error}"))?;
+    #[cfg(windows)]
+    let opened = Command::new("rundll32").arg("url.dll,FileProtocolHandler").arg(parsed.as_str()).spawn();
+    #[cfg(not(windows))]
+    let opened = linux::xdg_open(parsed.as_str().as_ref());
+    opened.map_err(|error| format!("Could not open the link: {error}"))?;
     Ok(())
 }
 
@@ -3069,6 +3132,8 @@ fn take_pending_chat() -> Option<String> {
 }
 
 fn main() {
+    #[cfg(not(windows))]
+    linux::prepare_webview();
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
@@ -3164,6 +3229,21 @@ mod tests {
         fs::write(root.join("Data/Other/Mine.txt"), b"x").unwrap();
         let manifest = prune_manifest(&["Data/patch-A.MPQ"], &["data/PATCH-A.mpq/sub/kept.BLP"]);
         assert_eq!(stale_files(root, &manifest).unwrap(), vec!["Data/patch-A.MPQ/Sub/Old.blp".to_string()]);
+    }
+
+    #[test]
+    fn files_where_folders_belong_are_renamed() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join("Data")).unwrap();
+        fs::write(root.join("Data/Patch-A.MPQ"), b"another server's archive").unwrap();
+        fs::write(root.join("Data/patch-3.MPQ"), b"stock").unwrap();
+        let manifest = prune_manifest(&["Data/patch-A.MPQ"], &["Data/patch-A.MPQ/Sub/New.blp", "Data/patch-3.MPQ"]);
+        let moved = move_files_blocking_folders(root, &manifest).unwrap();
+        assert_eq!(moved, vec![root.join("Data/patch-A.MPQ.replaced")]);
+        assert!(root.join("Data/Patch-A.MPQ.replaced").is_file() || root.join("Data/patch-A.MPQ.replaced").is_file());
+        assert!(!root.join("Data/patch-A.MPQ").exists());
+        assert!(root.join("Data/patch-3.MPQ").is_file());
     }
 
     #[tokio::test]

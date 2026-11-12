@@ -633,6 +633,11 @@
         </div>
         <label for="realmNameInput">Realm name</label>
         <input id="realmNameInput" type="text" spellcheck="false" />
+        <div id="wineSettings" hidden>
+          <label for="wineCommandInput">Wine or Proton</label>
+          <input id="wineCommandInput" type="text" placeholder="Automatic" spellcheck="false" />
+          <p>Linux only. Empty uses wine if it is installed, or else Steam's newest Proton. Can also be umu-run, or the full path of a Proton folder's <code>proton</code> file.</p>
+        </div>
         </details>
         <div class="settings-options">
           <label><input id="cleanWdbInput" type="checkbox" checked /> Clean WDB before launching</label>

@@ -26,7 +26,8 @@ const DEFAULT_SETTINGS = {
   cleanWdb: true,
   clearCache: true,
   closeAction: 'ask',
-  playAction: 'minimize'
+  playAction: 'minimize',
+  wineCommand: ''
 };
 
 const appState = {
@@ -1845,6 +1846,8 @@ function populateSettingsForm() {
   realmHostInput.value = appState.settings.realmHost || DEFAULT_SETTINGS.realmHost;
   realmPortInput.value = appState.settings.realmPort || DEFAULT_SETTINGS.realmPort;
   $('#realmNameInput').value = appState.settings.realmName || '';
+  $('#wineSettings').hidden = navigator.userAgent.includes('Windows');
+  $('#wineCommandInput').value = appState.settings.wineCommand || '';
   populateLoginForm();
   if (appState.runtimeInfo?.settingsPath) {
     $('#settingsLocation').textContent = `Settings: ${appState.runtimeInfo.settingsPath}`;
@@ -2017,7 +2020,8 @@ $('#saveSettingsButton').addEventListener('click', async () => {
     clearCache: clearCacheInput.checked,
     minimizeOnPlay: false,
     closeAction: closeActionSelect.value,
-    playAction: playActionSelect.value
+    playAction: playActionSelect.value,
+    wineCommand: $('#wineCommandInput').value.trim()
   };
 
   try {
