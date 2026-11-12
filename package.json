@@ -1,6 +1,6 @@
 {
   "name": "whe-launcher",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "private": true,
   "description": "Desktop launcher for WHE",
   "scripts": {
