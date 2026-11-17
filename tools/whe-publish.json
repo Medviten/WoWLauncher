@@ -9,7 +9,7 @@
     { "name": "Peace" }
   ],
   "files": ["WowClient64.exe", "XvidDecoder.dll", "OpenAL64.dll", "Data/*.mpq", "Data/*.MPQ"],
-  "folders": ["Data/enUS", "Data/DBFilesClient", "Data/patch-A.MPQ", "Data/patch-B.MPQ", "Data/Retail", "Interface", "Data/patch-A.war.MPQ"],
+  "folders": ["Data/enUS", "Data/patch-A.MPQ", "Data/Retail", "Interface", "Data/patch-A.war.MPQ"],
   "exclude": ["Data/Retail/Cache/*", "*.log", "*.pdb", "*.zip", "Thumbs.db", "desktop.ini", ".git*"],
   "extras": {
     "msvcp140.dll": "C:/Windows/System32/msvcp140.dll",
